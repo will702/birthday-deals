@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -23,14 +23,18 @@ export const metadata: Metadata = {
     "Katalog promo ulang tahun di Indonesia (Boost Juice 100% gratis, Sushi Tei, Starbucks, diskon 50%) yang dikumpulkan scraper otomatis dan diperbarui komunitas dengan bukti asli.",
 };
 
+export const viewport: Viewport = {
+  themeColor: "#FAF7F2",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="id"
       className={`${plusJakarta.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#FAF7F2] text-[#18181B]">
-        <Suspense fallback={<div className="h-16 border-b border-[#E4DDD3] bg-[#FAF7F2]" />}>
+      <body className="min-h-full flex flex-col bg-canvas text-ink">
+        <Suspense fallback={<div className="h-16 border-b border-hairline bg-canvas" />}>
           <SiteHeader />
         </Suspense>
         <main className="flex-1 w-full">{children}</main>

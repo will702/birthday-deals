@@ -109,40 +109,40 @@ export function ScraperDashboard({
     <div className="space-y-6">
       {/* Real Summary Telemetry */}
       <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-lg border border-[#E4DDD3] bg-white p-4">
-          <dt className="text-xs text-[#71717A]">Total Promo Terdata</dt>
-          <dd className="mt-1 font-mono text-2xl font-bold text-[#18181B] tabular-nums">
+        <div className="rounded-xl border border-hairline bg-surface p-4">
+          <dt className="text-xs text-ink-muted">Total Promo Terdata</dt>
+          <dd className="mt-1 font-mono text-2xl font-bold text-ink tabular-nums">
             {summary.totalDeals}
           </dd>
         </div>
-        <div className="rounded-lg border border-[#BCE3CE] bg-[#ECFDF3] p-4">
-          <dt className="text-xs text-[#146C43]">Promo Aktif</dt>
-          <dd className="mt-1 font-mono text-2xl font-bold text-[#146C43] tabular-nums">
+        <div className="rounded-xl border border-success-line bg-success-bg p-4">
+          <dt className="text-xs text-emerald">Promo Aktif</dt>
+          <dd className="mt-1 font-mono text-2xl font-bold text-emerald tabular-nums">
             {summary.activeDeals}
           </dd>
         </div>
-        <div className="rounded-lg border border-[#FDE68A] bg-[#FFFBEB] p-4">
-          <dt className="text-xs text-[#B45309]">Perlu Cek Ulang (Stale)</dt>
-          <dd className="mt-1 font-mono text-2xl font-bold text-[#B45309] tabular-nums">
+        <div className="rounded-xl border border-amber/30 bg-amber/10 p-4">
+          <dt className="text-xs text-amber">Perlu Cek Ulang (Stale)</dt>
+          <dd className="mt-1 font-mono text-2xl font-bold text-amber tabular-nums">
             {summary.staleDeals}
           </dd>
         </div>
-        <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-4">
-          <dt className="text-xs text-[#C83228]">Berakhir (Expired)</dt>
-          <dd className="mt-1 font-mono text-2xl font-bold text-[#C83228] tabular-nums">
+        <div className="rounded-xl border border-danger-line bg-danger-bg p-4">
+          <dt className="text-xs text-accent">Berakhir (Expired)</dt>
+          <dd className="mt-1 font-mono text-2xl font-bold text-accent tabular-nums">
             {summary.expiredDeals}
           </dd>
         </div>
       </dl>
 
       {/* Control Panel */}
-      <section className="rounded-lg border border-[#E4DDD3] bg-white p-5 space-y-4">
+      <section className="rounded-xl border border-hairline bg-surface p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold text-[#18181B]">
+            <h2 className="text-base font-bold text-ink">
               Konfigurasi Sumber Scraper Indonesia
             </h2>
-            <p className="text-xs text-[#52525B] mt-0.5">
+            <p className="text-xs text-ink-2 mt-0.5">
               Pilih modul sumber yang ingin dijalankan. Situs yang dilindungi anti-bot/CAPTCHA otomatis dilewati tanpa bypass.
             </p>
           </div>
@@ -153,13 +153,13 @@ export function ScraperDashboard({
               onChange={(e) => setAdminToken(e.target.value)}
               placeholder="Token admin"
               aria-label="Token admin"
-              className="rounded border border-[#D3C8B8] bg-white px-2.5 py-1 text-xs focus:border-[#18181B] focus:outline-none"
+              className="field rounded-lg border border-line-strong bg-surface px-2.5 py-1 text-xs"
             />
             <button
               type="button"
               disabled={isRunning}
               onClick={() => handleRunScraper(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-[#D3C8B8] bg-[#FAF7F2] px-3 py-2 text-xs font-semibold text-[#18181B] hover:bg-[#F3EDE3] disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-canvas px-3 py-2 text-xs font-semibold text-ink hover:bg-subtle disabled:opacity-60 pressable focus-ring"
             >
               <RefreshCw
                 className={`h-3.5 w-3.5 ${isRunning ? "animate-spin" : ""}`}
@@ -172,7 +172,7 @@ export function ScraperDashboard({
               type="button"
               disabled={isRunning || (selectedSources.length === 0 && !runFreshness)}
               onClick={() => handleRunScraper(false)}
-              className="inline-flex items-center gap-1.5 rounded-md bg-[#C83228] px-4 py-2 text-xs font-bold text-white hover:bg-[#9F221A] disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-bold text-white hover:bg-accent-hover disabled:opacity-60 pressable focus-ring"
             >
               <Play className="h-3.5 w-3.5" aria-hidden="true" />
               {isRunning ? "Sedang Scraping..." : "Jalankan Scraper Sekarang"}
@@ -186,21 +186,17 @@ export function ScraperDashboard({
             return (
               <label
                 key={opt.key}
-                className={`cursor-pointer rounded-md border p-3.5 flex items-start gap-2.5 transition-colors ${
-                  checked
-                    ? "border-[#18181B] bg-[#FAF7F2]"
-                    : "border-[#E4DDD3] bg-white hover:border-[#D3C8B8]"
-                }`}
+                className="cursor-pointer rounded-lg border border-hairline bg-surface p-3.5 flex items-start gap-2.5 transition-colors hover:border-line-strong has-[:checked]:border-accent has-[:checked]:bg-accent/5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
               >
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggleSource(opt.key)}
-                  className="mt-0.5 h-4 w-4 accent-[#C83228]"
+                  className="mt-0.5 h-4 w-4 accent-accent"
                 />
                 <div>
-                  <div className="text-xs font-bold text-[#18181B]">{opt.label}</div>
-                  <div className="text-[11px] text-[#52525B] mt-1 leading-relaxed">
+                  <div className="text-xs font-bold text-ink">{opt.label}</div>
+                  <div className="text-[11px] text-ink-2 mt-1 leading-relaxed">
                     {opt.detail}
                   </div>
                 </div>
@@ -209,24 +205,24 @@ export function ScraperDashboard({
           })}
         </div>
 
-        <label className="inline-flex items-center gap-2 text-xs font-medium text-[#18181B] cursor-pointer">
+        <label className="inline-flex items-center gap-2 text-xs font-medium text-ink cursor-pointer">
           <input
             type="checkbox"
             checked={runFreshness}
             onChange={(e) => setRunFreshness(e.target.checked)}
-            className="h-4 w-4 accent-[#C83228]"
+            className="h-4 w-4 accent-accent"
           />
           Sertakan Freshness &amp; HTTP Link Health Check setelah scraping
         </label>
 
         {error && (
-          <p role="alert" className="text-xs font-semibold text-[#C83228]">
+          <p role="alert" className="reveal text-xs font-semibold text-accent">
             {error}
           </p>
         )}
 
         {lastOutputNotes.length > 0 && (
-          <div className="rounded-md border border-[#BCE3CE] bg-[#ECFDF3] p-3 space-y-1 text-xs text-[#146C43]">
+          <div className="reveal rounded-lg border border-success-line bg-success-bg p-3 space-y-1 text-xs text-emerald">
             <p className="font-bold">Hasil Eksekusi Terbaru:</p>
             <ul className="list-disc pl-4 space-y-0.5">
               {lastOutputNotes.map((line, i) => (
@@ -238,22 +234,22 @@ export function ScraperDashboard({
       </section>
 
       {/* Run History Table */}
-      <section className="rounded-lg border border-[#E4DDD3] bg-white overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-[#E4DDD3] flex items-center justify-between">
-          <h2 className="text-base font-bold text-[#18181B]">
+      <section className="rounded-xl border border-hairline bg-surface overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-hairline flex items-center justify-between">
+          <h2 className="text-base font-bold text-ink">
             Riwayat Eksekusi Scraper ({runs.length})
           </h2>
-          <span className="text-xs text-[#71717A]">CLI: npm run scrape</span>
+          <span className="text-xs text-ink-muted">CLI: npm run scrape</span>
         </div>
 
         {runs.length === 0 ? (
-          <div className="p-8 text-center text-sm text-[#52525B]">
+          <div className="p-8 text-center text-sm text-ink-2">
             Belum ada catatan eksekusi scraper. Klik &quot;Jalankan Scraper Sekarang&quot; di atas.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#FAF7F2] border-b border-[#E4DDD3] text-[#71717A]">
+              <thead className="bg-canvas border-b border-hairline text-ink-muted">
                 <tr>
                   <th className="px-4 py-2.5 font-semibold">Sumber</th>
                   <th className="px-4 py-2.5 font-semibold">Status</th>
@@ -264,25 +260,25 @@ export function ScraperDashboard({
                   <th className="px-4 py-2.5 font-semibold">Catatan / Log</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E4DDD3]">
+              <tbody className="divide-y divide-hairline">
                 {runs.map((run) => {
                   const statusColor =
                     run.status === "SUCCESS"
-                      ? "bg-[#ECFDF3] text-[#146C43] border-[#BCE3CE]"
+                      ? "bg-success-bg text-emerald border-success-line"
                       : run.status === "PARTIAL"
-                        ? "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]"
+                        ? "bg-amber/10 text-amber border-amber/30"
                         : run.status === "FAILED"
-                          ? "bg-[#FEF2F2] text-[#C83228] border-[#FECACA]"
-                          : "bg-[#F3EDE3] text-[#18181B] border-[#D3C8B8]";
+                          ? "bg-danger-bg text-accent border-danger-line"
+                          : "bg-subtle text-ink border-line-strong";
 
                   return (
-                    <tr key={run.id} className="hover:bg-[#FAF7F2]/60">
-                      <td className="px-4 py-3 font-semibold text-[#18181B]">
+                    <tr key={run.id} className="hover:bg-canvas/60">
+                      <td className="px-4 py-3 font-semibold text-ink">
                         {run.sourceName}
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex rounded border px-2 py-0.5 font-mono text-[10px] font-bold ${statusColor}`}
+                          className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold ${statusColor}`}
                         >
                           {run.status}
                         </span>
@@ -290,13 +286,13 @@ export function ScraperDashboard({
                       <td className="px-4 py-3 text-right font-mono tabular-nums">
                         {run.dealsFound}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono tabular-nums text-[#146C43] font-semibold">
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-emerald font-semibold">
                         +{run.dealsCreated}
                       </td>
                       <td className="px-4 py-3 text-right font-mono tabular-nums">
                         {run.dealsUpdated}
                       </td>
-                      <td className="px-4 py-3 text-[#52525B] whitespace-nowrap font-mono tabular-nums">
+                      <td className="px-4 py-3 text-ink-2 whitespace-nowrap font-mono tabular-nums">
                         {new Date(run.startedAt).toLocaleString("id-ID", {
                           day: "2-digit",
                           month: "short",
@@ -304,7 +300,7 @@ export function ScraperDashboard({
                           minute: "2-digit",
                         })}
                       </td>
-                      <td className="px-4 py-3 text-[#52525B] max-w-xs truncate" title={run.errorMessage || ""}>
+                      <td className="px-4 py-3 text-ink-2 max-w-xs truncate" title={run.errorMessage || ""}>
                         {run.errorMessage || "-"}
                       </td>
                     </tr>

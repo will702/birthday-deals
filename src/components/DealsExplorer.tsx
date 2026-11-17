@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { RefreshCw, Search, X } from "lucide-react";
 import type { DealSummaryDto } from "@/lib/deal-types";
@@ -35,6 +35,13 @@ export function DealsExplorer({
   const [sortBy, setSortBy] = useState<"freshness" | "discount" | "votes" | "newest">("freshness");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  // Entrance animation only on first render; filtering must not re-animate.
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setHasAnimated(true), 900);
+    return () => clearTimeout(t);
+  }, []);
 
   async function refreshFromApi() {
     setIsRefreshing(true);
@@ -192,32 +199,32 @@ export function DealsExplorer({
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 space-y-6">
       {/* Editorial Header + Real Database Telemetry */}
-      <section className="border-b border-[#E4DDD3] pb-6 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      <section className="border-b border-hairline pb-6 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div className="max-w-2xl">
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#18181B]">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink">
             Direktori Promo Ulang Tahun Indonesia
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-[#52525B] leading-relaxed">
+          <p className="mt-2 text-sm sm:text-base text-ink-2 leading-relaxed">
             Kumpulan promo birthday treat di Indonesia—mulai dari Boost Juice 100% gratis, Sushi Tei, Starbucks, hingga diskon restoran 50%—yang dipantau scraper web dan diverifikasi ulang oleh komunitas dengan bukti struk atau tautan resmi.
           </p>
         </div>
 
         <dl className="grid grid-cols-3 gap-3 shrink-0">
-          <div className="rounded-md border border-[#E4DDD3] bg-white px-3.5 py-2.5">
-            <dt className="text-[11px] font-medium text-[#71717A]">Promo Aktif</dt>
-            <dd className="mt-0.5 font-mono text-lg font-bold text-[#18181B] tabular-nums">
+          <div className="rounded-xl border border-hairline bg-surface px-3.5 py-2.5">
+            <dt className="text-[11px] font-medium text-ink-muted">Promo Aktif</dt>
+            <dd className="mt-0.5 font-mono text-lg font-bold text-ink tabular-nums">
               {stats.totalActive}
             </dd>
           </div>
-          <div className="rounded-md border border-[#BCE3CE] bg-[#ECFDF3] px-3.5 py-2.5">
-            <dt className="text-[11px] font-medium text-[#146C43]">100% Gratis</dt>
-            <dd className="mt-0.5 font-mono text-lg font-bold text-[#146C43] tabular-nums">
+          <div className="rounded-xl border border-success-line bg-success-bg px-3.5 py-2.5">
+            <dt className="text-[11px] font-medium text-emerald">100% Gratis</dt>
+            <dd className="mt-0.5 font-mono text-lg font-bold text-emerald tabular-nums">
               {stats.free100Count}
             </dd>
           </div>
-          <div className="rounded-md border border-[#E4DDD3] bg-white px-3.5 py-2.5">
-            <dt className="text-[11px] font-medium text-[#71717A]">Diskon 50%+</dt>
-            <dd className="mt-0.5 font-mono text-lg font-bold text-[#C83228] tabular-nums">
+          <div className="rounded-xl border border-hairline bg-surface px-3.5 py-2.5">
+            <dt className="text-[11px] font-medium text-ink-muted">Diskon 50%+</dt>
+            <dd className="mt-0.5 font-mono text-lg font-bold text-accent tabular-nums">
               {stats.discount50Count}
             </dd>
           </div>
@@ -238,7 +245,7 @@ export function DealsExplorer({
         <div className="flex flex-col md:flex-row gap-2.5">
           <div className="relative flex-1">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#71717A]"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted"
               aria-hidden="true"
             />
             <input
@@ -247,14 +254,14 @@ export function DealsExplorer({
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Cari brand atau promo (mis. Boost, Sushi Tei, Starbucks, 50%, Boga)..."
               aria-label="Cari brand atau promo"
-              className="w-full rounded-md border border-[#D3C8B8] bg-white pl-9 pr-9 py-2 text-sm text-[#18181B] placeholder:text-[#71717A] focus:border-[#C83228] focus:outline-none"
+              className="w-full field rounded-lg border border-line-strong bg-surface pl-9 pr-9 py-2 text-sm text-ink placeholder:text-ink-muted"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery("")}
                 aria-label="Hapus pencarian"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#71717A] hover:text-[#18181B]"
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-ink-muted hover:text-ink pressable focus-ring"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -266,7 +273,7 @@ export function DealsExplorer({
               aria-label="Kategori promo"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="rounded-md border border-[#D3C8B8] bg-white px-3 py-2 text-sm font-medium text-[#18181B] focus:border-[#C83228] focus:outline-none"
+              className="field rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm font-medium text-ink"
             >
               <option value="ALL">Semua Kategori</option>
               {DEAL_CATEGORIES.map((cat) => (
@@ -282,7 +289,7 @@ export function DealsExplorer({
               onChange={(e) =>
                 setSortBy(e.target.value as "freshness" | "discount" | "votes" | "newest")
               }
-              className="rounded-md border border-[#D3C8B8] bg-white px-3 py-2 text-sm font-medium text-[#18181B] focus:border-[#C83228] focus:outline-none"
+              className="field rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm font-medium text-ink"
             >
               <option value="freshness">Terbaru &amp; Freshness Tertinggi</option>
               <option value="discount">Diskon Terbesar (100% dulu)</option>
@@ -294,7 +301,7 @@ export function DealsExplorer({
               type="button"
               onClick={refreshFromApi}
               disabled={isRefreshing}
-              className="inline-flex items-center gap-1.5 rounded-md border border-[#D3C8B8] bg-white px-3 py-2 text-sm font-medium text-[#18181B] hover:bg-[#F3EDE3] disabled:opacity-60 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-subtle disabled:opacity-60 pressable focus-ring"
             >
               <RefreshCw
                 className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
@@ -314,10 +321,10 @@ export function DealsExplorer({
                 key={tab.key}
                 type="button"
                 onClick={() => setQuickFilter(tab.key)}
-                className={`rounded-md border px-3 py-1 text-xs font-semibold transition-colors ${
+                className={`rounded-full border px-3 py-1 text-xs font-semibold pressable focus-ring ${
                   active
-                    ? "border-[#18181B] bg-[#18181B] text-white"
-                    : "border-[#E4DDD3] bg-white text-[#52525B] hover:border-[#D3C8B8] hover:text-[#18181B]"
+                    ? "border-ink bg-ink text-white"
+                    : "border-hairline bg-surface text-ink-2 hover:border-line-strong hover:text-ink"
                 }`}
               >
                 {tab.label}
@@ -331,13 +338,13 @@ export function DealsExplorer({
       {fetchError && (
         <div
           role="alert"
-          className="rounded-md border border-[#FECACA] bg-[#FEF2F2] p-4 flex items-center justify-between gap-4 text-sm text-[#C83228]"
+          className="reveal rounded-xl border border-danger-line bg-danger-bg p-4 flex items-center justify-between gap-4 text-sm text-accent"
         >
           <span>{fetchError}</span>
           <button
             type="button"
             onClick={refreshFromApi}
-            className="rounded border border-[#C83228] px-3 py-1 text-xs font-semibold hover:bg-[#C83228] hover:text-white"
+            className="rounded-lg border border-accent px-3 py-1 text-xs font-semibold hover:bg-accent hover:text-white pressable focus-ring"
           >
             Coba Lagi
           </button>
@@ -345,9 +352,9 @@ export function DealsExplorer({
       )}
 
       {/* Result Count + Last Scrape Metadata */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#71717A]">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
         <span>
-          Menampilkan <strong className="text-[#18181B] tabular-nums">{filteredDeals.length}</strong>{" "}
+          Menampilkan <strong className="text-ink tabular-nums">{filteredDeals.length}</strong>{" "}
           promo
           {lastScrapedIso
             ? ` · Scraper terakhir jalan ${new Date(lastScrapedIso).toLocaleDateString("id-ID", {
@@ -357,7 +364,7 @@ export function DealsExplorer({
               })}`
             : ""}
         </span>
-        <Link href="/submit" className="font-semibold text-[#C83228] hover:underline">
+        <Link href="/submit" className="font-semibold text-accent hover:underline rounded-md pressable focus-ring">
           Punya temuan promo lain? Kirim dengan bukti
         </Link>
       </div>
@@ -368,38 +375,38 @@ export function DealsExplorer({
           {Array.from({ length: 6 }).map((_, idx) => (
             <div
               key={idx}
-              className="h-64 rounded-lg border border-[#E4DDD3] bg-white p-4 animate-pulse space-y-3"
+              className="h-64 rounded-xl border border-hairline bg-surface p-4 space-y-3"
             >
               <div className="flex justify-between">
-                <div className="h-5 w-24 rounded bg-[#F3EDE3]" />
-                <div className="h-5 w-20 rounded bg-[#F3EDE3]" />
+                <div className="h-5 w-24 rounded-md skeleton" />
+                <div className="h-5 w-20 rounded-md skeleton" />
               </div>
-              <div className="h-4 w-32 rounded bg-[#F3EDE3]" />
-              <div className="h-5 w-4/5 rounded bg-[#F3EDE3]" />
-              <div className="h-16 w-full rounded bg-[#FAF7F2]" />
+              <div className="h-4 w-32 rounded-md skeleton" />
+              <div className="h-5 w-4/5 rounded-md skeleton" />
+              <div className="h-16 w-full rounded-md skeleton" />
             </div>
           ))}
         </div>
       ) : filteredDeals.length === 0 ? (
         /* Empty State */
-        <div className="rounded-lg border border-[#E4DDD3] bg-white p-10 text-center">
-          <p className="text-base font-bold text-[#18181B]">
+        <div className="rounded-xl border border-hairline bg-surface p-10 text-center">
+          <p className="text-base font-bold text-ink">
             Tidak ada promo yang cocok dengan filter ini.
           </p>
-          <p className="mt-1 text-sm text-[#52525B]">
+          <p className="mt-1 text-sm text-ink-2">
             Coba ubah kata kunci pencarian atau reset filter untuk melihat semua promo ulang tahun Indonesia.
           </p>
           <div className="mt-4 flex items-center justify-center gap-3">
             <button
               type="button"
               onClick={resetAllFilters}
-              className="rounded-md border border-[#D3C8B8] bg-[#FAF7F2] px-4 py-2 text-sm font-semibold text-[#18181B] hover:bg-[#F3EDE3]"
+              className="rounded-lg border border-line-strong bg-canvas px-4 py-2 text-sm font-semibold text-ink hover:bg-subtle pressable focus-ring"
             >
               Reset Semua Filter
             </button>
             <Link
               href="/submit"
-              className="rounded-md bg-[#C83228] px-4 py-2 text-sm font-semibold text-white hover:bg-[#9F221A]"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover pressable focus-ring"
             >
               Kirim Temuan Baru
             </Link>
@@ -408,8 +415,13 @@ export function DealsExplorer({
       ) : (
         /* Populated Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredDeals.map((deal) => (
-            <DealCard key={deal.id} deal={deal} nowIso={nowIso} />
+          {filteredDeals.map((deal, index) => (
+            <DealCard
+              key={deal.id}
+              deal={deal}
+              nowIso={nowIso}
+              revealIndex={hasAnimated ? undefined : index}
+            />
           ))}
         </div>
       )}

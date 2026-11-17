@@ -11,24 +11,287 @@
   --border-strong: #d3c8b8;
   --accent-primary: #c83228;
   --accent-primary-hover: #9f221a;
+  --accent-soft: #facbc7;
   --accent-emerald: #146c43;
   --accent-amber: #b45309;
+  --danger-bg: #fef2f2;
+  --danger-line: #fecaca;
+  --success-bg: #ecfdf3;
+  --success-line: #bce3cd;
+  --info-bg: #eff6ff;
+  --info-line: #bfdbfe;
+  --info-ink: #1d4ed8;
+  --warn-bg: #fffbeb;
+  --warn-line: #fde68a;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-press: 120ms;
+  --dur-ui: 200ms;
 }
 
 @theme inline {
   --color-background: var(--bg-canvas);
   --color-foreground: var(--ink-primary);
+
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-subtle: var(--bg-subtle);
+  --color-ink: var(--ink-primary);
+  --color-ink-2: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-hairline: var(--border-hairline);
+  --color-line-strong: var(--border-strong);
+  --color-accent: var(--accent-primary);
+  --color-accent-hover: var(--accent-primary-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-emerald: var(--accent-emerald);
+  --color-amber: var(--accent-amber);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-line: var(--danger-line);
+  --color-success-bg: var(--success-bg);
+  --color-success-line: var(--success-line);
+  --color-info-bg: var(--info-bg);
+  --color-info-line: var(--info-line);
+  --color-info: var(--info-ink);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-line: var(--warn-line);
+
   --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background-color: var(--bg-canvas);
   color: var(--ink-primary);
   font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  line-height: 1.5;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Display type: tighter tracking and leading as size grows */
+h1 {
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+h2 {
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+@layer components {
+  /* Instant, tactile press feedback on anything clickable */
+  .pressable {
+    transition:
+      transform var(--dur-press) var(--ease-out),
+      background-color 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease,
+      box-shadow var(--dur-ui) ease,
+      opacity 150ms ease;
+  }
+  .pressable:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  /* Visible keyboard focus, never on mouse click */
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+  }
+
+  /* Text inputs / selects (focus state lives outside the layer, see below) */
+  .field {
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  /* Translucent chrome: content scrolls underneath */
+  .material {
+    background-color: rgb(250 247 242 / 0.72);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgb(211 200 184 / 0.45);
+  }
+
+  /* Soft layered elevation for cards */
+  .card-lift {
+    transition:
+      box-shadow var(--dur-ui) ease,
+      border-color var(--dur-ui) ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .card-lift:hover {
+      border-color: var(--border-strong);
+      box-shadow:
+        0 1px 2px rgb(24 24 27 / 0.04),
+        0 4px 12px rgb(24 24 27 / 0.05),
+        0 12px 24px -8px rgb(24 24 27 / 0.06);
+    }
+  }
+
+  /* Entrance: fade + small rise. Stagger via --i, capped at 8 */
+  .reveal {
+    animation: reveal 280ms var(--ease-out) both;
+    animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+  }
+
+  /* Collapsible region: height via grid rows, no layout thrash on content */
+  .collapsible {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition:
+      grid-template-rows 180ms var(--ease-out),
+      opacity 150ms ease;
+  }
+  .collapsible[data-open="true"] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition:
+      grid-template-rows 240ms var(--ease-out),
+      opacity 200ms ease 40ms;
+  }
+  .collapsible > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Lightbox: scrim fades, image scales from its thumbnail (origin set inline) */
+  .lightbox-scrim {
+    animation: fade-in 200ms ease both;
+  }
+  .lightbox-scrim[data-closing="true"] {
+    animation: fade-out 140ms ease both;
+  }
+  .lightbox-panel {
+    animation: pop-in 240ms var(--ease-out) both;
+  }
+  .lightbox-scrim[data-closing="true"] .lightbox-panel {
+    animation: pop-out 140ms var(--ease-out) both;
+  }
+
+  /* Skeleton shimmer, calmer than animate-pulse */
+  .skeleton {
+    background: linear-gradient(
+      100deg,
+      rgb(228 221 211 / 0.5) 30%,
+      rgb(243 237 227 / 0.9) 50%,
+      rgb(228 221 211 / 0.5) 70%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+}
+
+/*
+ * Field focus is unlayered on purpose: Tailwind utilities (border-line-strong)
+ * live in the `utilities` layer and would otherwise beat a layered rule.
+ * Uses :focus (not :focus-visible) so mouse-clicked selects also show state;
+ * the transparent outline keeps a visible indicator in forced-colors mode.
+ */
+.field:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 30%, transparent);
+  outline: 2px solid transparent;
+  outline-offset: 0;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Reduced motion: keep gentle fades, drop movement */
+@media (prefers-reduced-motion: reduce) {
+  .pressable:active:not(:disabled) {
+    transform: none;
+  }
+  .reveal {
+    animation: fade-in 150ms ease both;
+    animation-delay: 0ms;
+  }
+  .collapsible,
+  .collapsible[data-open="true"] {
+    transition: opacity 150ms ease;
+  }
+  .lightbox-panel,
+  .lightbox-scrim[data-closing="true"] .lightbox-panel {
+    animation: fade-in 150ms ease both;
+  }
+  .skeleton,
+  .animate-pulse {
+    animation: none;
+  }
+  .animate-spin {
+    animation-duration: 2s;
+  }
+}
+
+/* Reduced transparency: frosted becomes solid */
+@media (prefers-reduced-transparency: reduce) {
+  .material {
+    background-color: var(--bg-canvas);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Higher contrast: stronger borders */
+@media (prefers-contrast: more) {
+  :root {
+    --border-hairline: var(--border-strong);
+    --ink-secondary: #3f3f46;
+    --ink-muted: #52525b;
+  }
 }

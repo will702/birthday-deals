@@ -99,32 +99,32 @@ export function getVerificationMeta(status: string): {
     case "ADMIN_VERIFIED":
       return {
         label: "Admin Verified",
-        className: "bg-[#ECFDF3] text-[#146C43] border-[#BCE3CE]",
+        className: "bg-success-bg text-emerald border-success-line",
       };
     case "SCRAPER_VERIFIED":
       return {
         label: "Scraper Aktif",
-        className: "bg-[#F3EDE3] text-[#18181B] border-[#D3C8B8]",
+        className: "bg-subtle text-ink border-line-strong",
       };
     case "COMMUNITY_SUBMITTED":
       return {
         label: "Bukti Komunitas",
-        className: "bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]",
+        className: "bg-info-bg text-info border-info-line",
       };
     case "STALE":
       return {
         label: "Perlu Cek Ulang",
-        className: "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]",
+        className: "bg-warn-bg text-amber border-warn-line",
       };
     case "EXPIRED":
       return {
         label: "Berakhir / Expired",
-        className: "bg-[#FEF2F2] text-[#C83228] border-[#FECACA]",
+        className: "bg-danger-bg text-accent border-danger-line",
       };
     default:
       return {
         label: status,
-        className: "bg-[#F3EDE3] text-[#52525B] border-[#E4DDD3]",
+        className: "bg-subtle text-ink-2 border-hairline",
       };
   }
 }

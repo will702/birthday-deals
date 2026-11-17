@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, ChevronDown } from "lucide-react";
 import type { DealSummaryDto } from "@/lib/deal-types";
 
 const MONTHS = [
@@ -37,36 +37,44 @@ export function BirthdayPlanner({
   const [expanded, setExpanded] = useState<boolean>(false);
 
   const daysUntilBirthday = useMemo(() => {
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
     let target = new Date(today.getFullYear(), month, day);
     if (target.getTime() < startOfToday.getTime()) {
       const diffPast = Math.round(
-        (startOfToday.getTime() - target.getTime()) / (1000 * 60 * 60 * 24)
+        (startOfToday.getTime() - target.getTime()) / (1000 * 60 * 60 * 24),
       );
       if (diffPast <= 7) {
         return -diffPast; // Still inside H+7 claim window!
       }
       target = new Date(today.getFullYear() + 1, month, day);
     }
-    return Math.round((target.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.round(
+      (target.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24),
+    );
   }, [day, month, today]);
 
   const activeDeals = useMemo(
     () => deals.filter((d) => d.verificationStatus !== "EXPIRED"),
-    [deals]
+    [deals],
   );
 
   const prepAppDeals = useMemo(
     () =>
       activeDeals
         .filter((d) => d.requiresApp && (d.minRegistrationDays ?? 0) > 0)
-        .sort((a, b) => (b.minRegistrationDays ?? 0) - (a.minRegistrationDays ?? 0)),
-    [activeDeals]
+        .sort(
+          (a, b) => (b.minRegistrationDays ?? 0) - (a.minRegistrationDays ?? 0),
+        ),
+    [activeDeals],
   );
 
   const walkInDeals = useMemo(
     () => activeDeals.filter((d) => d.requiresIdCard && !d.requiresApp),
-    [activeDeals]
+    [activeDeals],
   );
 
   const statusText = useMemo(() => {
@@ -83,18 +91,18 @@ export function BirthdayPlanner({
   return (
     <section
       aria-label="Perencana Persiapan Promo Ulang Tahun"
-      className="rounded-lg border border-[#E4DDD3] bg-white p-4"
+      className="rounded-xl border border-hairline bg-surface p-4"
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 rounded-md border border-[#E4DDD3] bg-[#FAF7F2] p-2 text-[#C83228]">
+          <div className="mt-0.5 rounded-md border border-hairline bg-canvas p-2 text-accent">
             <CalendarDays className="h-4 w-4" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-[#18181B]">
+            <h2 className="text-sm font-bold text-ink">
               Cek Kesiapan Tanggal Lahirmu (H-30 &amp; H-7 Planner)
             </h2>
-            <p className="text-xs text-[#52525B] mt-0.5">{statusText}</p>
+            <p className="text-xs text-ink-2 mt-0.5">{statusText}</p>
           </div>
         </div>
 
@@ -106,7 +114,7 @@ export function BirthdayPlanner({
             id="planner-day"
             value={day}
             onChange={(e) => setDay(Number(e.target.value))}
-            className="rounded-md border border-[#D3C8B8] bg-[#FAF7F2] px-2.5 py-1.5 text-xs font-semibold text-[#18181B] tabular-nums focus:border-[#C83228] focus:outline-none"
+            className="field rounded-lg border border-line-strong bg-canvas px-2.5 py-1.5 text-xs font-semibold text-ink tabular-nums"
           >
             {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
               <option key={d} value={d}>
@@ -122,7 +130,7 @@ export function BirthdayPlanner({
             id="planner-month"
             value={month}
             onChange={(e) => setMonth(Number(e.target.value))}
-            className="rounded-md border border-[#D3C8B8] bg-[#FAF7F2] px-2.5 py-1.5 text-xs font-semibold text-[#18181B] focus:border-[#C83228] focus:outline-none"
+            className="field rounded-lg border border-line-strong bg-canvas px-2.5 py-1.5 text-xs font-semibold text-ink"
           >
             {MONTHS.map((m, idx) => (
               <option key={m} value={idx}>
@@ -134,88 +142,104 @@ export function BirthdayPlanner({
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
-            className="rounded-md border border-[#D3C8B8] bg-white px-3 py-1.5 text-xs font-semibold text-[#18181B] hover:bg-[#F3EDE3] transition-colors"
+            aria-expanded={expanded}
+            aria-controls="planner-checklist"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-xs font-semibold text-ink hover:bg-subtle pressable focus-ring"
           >
             {expanded ? "Tutup Checklist" : "Lihat Checklist Persiapan"}
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
           </button>
         </div>
       </div>
 
-      {expanded && (
-        <div className="mt-4 pt-4 border-t border-[#E4DDD3] grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-md border border-[#E4DDD3] bg-[#FAF7F2] p-3">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-[#B45309]">
-                Wajib Daftar Aplikasi Sebelum Hari H ({prepAppDeals.length})
-              </h3>
-              <button
-                type="button"
-                onClick={() => onApplyPlannerFilter("prep_apps")}
-                className="text-xs font-semibold text-[#C83228] hover:underline"
-              >
-                Filter di direktori
-              </button>
-            </div>
-            <p className="mt-1 text-xs text-[#52525B]">
-              Beberapa brand (seperti Starbucks &amp; Boost) menolak klaim jika akun baru dibuat mendekati hari H.
-            </p>
-            <ul className="mt-2.5 space-y-1.5">
-              {prepAppDeals.slice(0, 5).map((deal) => (
-                <li
-                  key={deal.id}
-                  className="flex items-center justify-between gap-2 rounded border border-[#E4DDD3] bg-white px-2.5 py-1.5 text-xs"
+      <div
+        id="planner-checklist"
+        className="collapsible"
+        data-open={expanded}
+        aria-hidden={!expanded}
+        inert={!expanded}
+      >
+        <div>
+          <div className="mt-4 pt-4 border-t border-hairline grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-lg border border-hairline bg-canvas p-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wide text-amber">
+                  Wajib Daftar Aplikasi Sebelum Hari H ({prepAppDeals.length})
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => onApplyPlannerFilter("prep_apps")}
+                  className="rounded-md text-xs font-semibold text-accent hover:underline pressable focus-ring"
                 >
-                  <Link
-                    href={`/deals/${deal.slug}`}
-                    className="font-semibold text-[#18181B] hover:text-[#C83228] truncate"
+                  Filter di direktori
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-ink-2">
+                Beberapa brand (seperti Starbucks &amp; Boost) menolak klaim
+                jika akun baru dibuat mendekati hari H.
+              </p>
+              <ul className="mt-2.5 space-y-1.5">
+                {prepAppDeals.slice(0, 5).map((deal) => (
+                  <li
+                    key={deal.id}
+                    className="flex items-center justify-between gap-2 rounded-md border border-hairline bg-surface px-2.5 py-1.5 text-xs"
                   >
-                    {deal.brandName} — {deal.appName || "App"}
-                  </Link>
-                  <span className="shrink-0 font-mono text-[11px] font-semibold text-[#B45309] tabular-nums">
-                    Min. H-{deal.minRegistrationDays}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+                    <Link
+                      href={`/deals/${deal.slug}`}
+                      className="rounded-md font-semibold text-ink hover:text-accent truncate pressable focus-ring"
+                    >
+                      {deal.brandName} — {deal.appName || "App"}
+                    </Link>
+                    <span className="shrink-0 font-mono text-[11px] font-semibold text-amber tabular-nums">
+                      Min. H-{deal.minRegistrationDays}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          <div className="rounded-md border border-[#E4DDD3] bg-[#FAF7F2] p-3">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-xs font-bold uppercase tracking-wide text-[#146C43]">
-                Langsung Datang Bawa KTP ({walkInDeals.length})
-              </h3>
-              <button
-                type="button"
-                onClick={() => onApplyPlannerFilter("walk_in_ktp")}
-                className="text-xs font-semibold text-[#C83228] hover:underline"
-              >
-                Filter di direktori
-              </button>
-            </div>
-            <p className="mt-1 text-xs text-[#52525B]">
-              Tidak perlu unduh aplikasi terlebih dahulu; cukup tunjukkan KTP/SIM/Paspor asli saat datang.
-            </p>
-            <ul className="mt-2.5 space-y-1.5">
-              {walkInDeals.slice(0, 5).map((deal) => (
-                <li
-                  key={deal.id}
-                  className="flex items-center justify-between gap-2 rounded border border-[#E4DDD3] bg-white px-2.5 py-1.5 text-xs"
+            <div className="rounded-lg border border-hairline bg-canvas p-3">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wide text-emerald">
+                  Langsung Datang Bawa KTP ({walkInDeals.length})
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => onApplyPlannerFilter("walk_in_ktp")}
+                  className="rounded-md text-xs font-semibold text-accent hover:underline pressable focus-ring"
                 >
-                  <Link
-                    href={`/deals/${deal.slug}`}
-                    className="font-semibold text-[#18181B] hover:text-[#C83228] truncate"
+                  Filter di direktori
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-ink-2">
+                Tidak perlu unduh aplikasi terlebih dahulu; cukup tunjukkan
+                KTP/SIM/Paspor asli saat datang.
+              </p>
+              <ul className="mt-2.5 space-y-1.5">
+                {walkInDeals.slice(0, 5).map((deal) => (
+                  <li
+                    key={deal.id}
+                    className="flex items-center justify-between gap-2 rounded-md border border-hairline bg-surface px-2.5 py-1.5 text-xs"
                   >
-                    {deal.brandName}
-                  </Link>
-                  <span className="shrink-0 font-mono text-[11px] font-medium text-[#146C43]">
-                    {deal.claimWindow}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                    <Link
+                      href={`/deals/${deal.slug}`}
+                      className="rounded-md font-semibold text-ink hover:text-accent truncate pressable focus-ring"
+                    >
+                      {deal.brandName}
+                    </Link>
+                    <span className="shrink-0 font-mono text-[11px] font-medium text-emerald">
+                      {deal.claimWindow}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </section>
   );
 }

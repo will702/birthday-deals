@@ -8,15 +8,15 @@ import { parseTermsJson } from "@/lib/validation";
 function DirectorySkeleton() {
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 space-y-6">
-      <div className="border-b border-[#E4DDD3] pb-6 space-y-3">
-        <div className="h-8 w-80 rounded bg-[#E4DDD3]/60 animate-pulse" />
-        <div className="h-4 w-2/3 rounded bg-[#E4DDD3]/60 animate-pulse" />
+      <div className="border-b border-hairline pb-6 space-y-3">
+        <div className="h-8 w-80 rounded-md skeleton" />
+        <div className="h-4 w-2/3 rounded-md skeleton" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, idx) => (
           <div
             key={idx}
-            className="h-60 rounded-lg border border-[#E4DDD3] bg-white p-4 animate-pulse"
+            className="h-60 rounded-xl border border-hairline skeleton"
           />
         ))}
       </div>

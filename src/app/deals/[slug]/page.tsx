@@ -15,10 +15,10 @@ import { formatIdr, formatRelativeDays, parseTermsJson } from "@/lib/validation"
 
 function DealDetailSkeleton() {
   return (
-    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-6 animate-pulse">
-      <div className="h-4 w-40 rounded bg-[#E4DDD3]" />
-      <div className="h-48 rounded-lg border border-[#E4DDD3] bg-white" />
-      <div className="h-72 rounded-lg border border-[#E4DDD3] bg-white" />
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-6">
+      <div className="h-4 w-40 rounded-md skeleton" />
+      <div className="h-48 rounded-xl border border-hairline skeleton" />
+      <div className="h-72 rounded-xl border border-hairline skeleton" />
     </div>
   );
 }
@@ -102,88 +102,88 @@ async function DealDetailLoader({
 
   const discountClasses =
     discount.tone === "emerald"
-      ? "bg-[#ECFDF3] text-[#146C43] border-[#BCE3CE]"
+      ? "bg-success-bg text-emerald border-success-line"
       : discount.tone === "vermilion"
-        ? "bg-[#FEF2F2] text-[#C83228] border-[#FACBC7]"
-        : "bg-[#F3EDE3] text-[#18181B] border-[#D3C8B8]";
+        ? "bg-danger-bg text-accent border-accent-soft"
+        : "bg-subtle text-ink border-line-strong";
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-6">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#52525B] hover:text-[#18181B]"
+        className="inline-flex items-center gap-1.5 rounded-md text-sm font-semibold text-ink-2 hover:text-ink pressable focus-ring"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         Kembali ke Direktori Promo
       </Link>
 
       {/* Main Deal Summary Card */}
-      <article className="rounded-lg border border-[#E4DDD3] bg-white p-6 space-y-5">
+      <article className="rounded-xl border border-hairline bg-surface p-6 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`inline-flex items-center rounded border px-2.5 py-1 font-mono text-xs font-bold tabular-nums ${discountClasses}`}
+              className={`inline-flex items-center rounded-md border px-2.5 py-1 font-mono text-xs font-bold tabular-nums ${discountClasses}`}
             >
               {discount.label}
             </span>
-            <span className="rounded border border-[#E4DDD3] bg-[#FAF7F2] px-2.5 py-1 text-xs font-medium text-[#52525B]">
+            <span className="rounded-md border border-hairline bg-canvas px-2.5 py-1 text-xs font-medium text-ink-2">
               {deal.category}
             </span>
-            <span className="rounded border border-[#E4DDD3] bg-[#FAF7F2] px-2.5 py-1 text-xs font-medium text-[#52525B]">
+            <span className="rounded-md border border-hairline bg-canvas px-2.5 py-1 text-xs font-medium text-ink-2">
               {getSourceLabel(deal.sourceType)}
             </span>
           </div>
 
           <span
-            className={`inline-flex items-center rounded border px-2.5 py-1 text-xs font-semibold ${statusMeta.className}`}
+            className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold ${statusMeta.className}`}
           >
             {statusMeta.label}
           </span>
         </div>
 
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#71717A]">
+          <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">
             {deal.brandName}
           </p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-[#18181B]">
+          <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-ink">
             {deal.title}
           </h1>
-          <p className="mt-3 text-sm sm:text-base text-[#52525B] leading-relaxed">
+          <p className="mt-3 text-sm sm:text-base text-ink-2 leading-relaxed">
             {deal.description}
           </p>
         </div>
 
-        <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-md border border-[#E4DDD3] bg-[#FAF7F2] p-4 text-xs">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-lg border border-hairline bg-canvas p-4 text-xs">
           <div>
-            <dt className="text-[#71717A]">Periode Klaim</dt>
-            <dd className="mt-1 font-bold text-[#18181B]">{deal.claimWindow}</dd>
+            <dt className="text-ink-muted">Periode Klaim</dt>
+            <dd className="mt-1 font-bold text-ink">{deal.claimWindow}</dd>
           </div>
           <div>
-            <dt className="text-[#71717A]">Minimum Transaksi</dt>
-            <dd className="mt-1 font-mono font-bold text-[#18181B] tabular-nums">
+            <dt className="text-ink-muted">Minimum Transaksi</dt>
+            <dd className="mt-1 font-mono font-bold text-ink tabular-nums">
               {formatIdr(deal.minPurchaseIdr)}
             </dd>
           </div>
           <div>
-            <dt className="text-[#71717A]">Identitas (KTP/SIM)</dt>
-            <dd className="mt-1 font-bold text-[#18181B]">
+            <dt className="text-ink-muted">Identitas (KTP/SIM)</dt>
+            <dd className="mt-1 font-bold text-ink">
               {deal.requiresIdCard ? "Wajib Ditunjukkan" : "Tidak Disebutkan"}
             </dd>
           </div>
           <div>
-            <dt className="text-[#71717A]">Terakhir Diverifikasi</dt>
-            <dd className="mt-1 font-bold text-[#146C43]">
+            <dt className="text-ink-muted">Terakhir Diverifikasi</dt>
+            <dd className="mt-1 font-bold text-emerald">
               {formatRelativeDays(deal.lastVerifiedAt, now)}
             </dd>
           </div>
         </dl>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div className="flex items-start gap-2.5 rounded-md border border-[#E4DDD3] p-3">
-            <Smartphone className="h-4 w-4 text-[#C83228] shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="flex items-start gap-2.5 rounded-lg border border-hairline p-3">
+            <Smartphone className="h-4 w-4 text-accent shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <p className="font-bold text-[#18181B]">Persyaratan Aplikasi</p>
-              <p className="mt-0.5 text-[#52525B]">
+              <p className="font-bold text-ink">Persyaratan Aplikasi</p>
+              <p className="mt-0.5 text-ink-2">
                 {deal.requiresApp
                   ? `Wajib aplikasi ${deal.appName || "resmi brand"}${
                       deal.minRegistrationDays
@@ -195,28 +195,28 @@ async function DealDetailLoader({
             </div>
           </div>
 
-          <div className="flex items-start gap-2.5 rounded-md border border-[#E4DDD3] p-3">
-            <MapPin className="h-4 w-4 text-[#146C43] shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="flex items-start gap-2.5 rounded-lg border border-hairline p-3">
+            <MapPin className="h-4 w-4 text-emerald shrink-0 mt-0.5" aria-hidden="true" />
             <div>
-              <p className="font-bold text-[#18181B]">Lokasi Berlaku</p>
-              <p className="mt-0.5 text-[#52525B]">{deal.locations}</p>
+              <p className="font-bold text-ink">Lokasi Berlaku</p>
+              <p className="mt-0.5 text-ink-2">{deal.locations}</p>
             </div>
           </div>
         </div>
 
         {/* Terms & Conditions Checklist */}
-        <div className="border-t border-[#E4DDD3] pt-4">
-          <h2 className="text-sm font-bold text-[#18181B] flex items-center gap-2">
-            <CheckSquare className="h-4 w-4 text-[#146C43]" aria-hidden="true" />
+        <div className="border-t border-hairline pt-4">
+          <h2 className="text-sm font-bold text-ink flex items-center gap-2">
+            <CheckSquare className="h-4 w-4 text-emerald" aria-hidden="true" />
             Syarat &amp; Ketentuan Klaim
           </h2>
           <ul className="mt-2.5 space-y-2">
             {terms.map((term, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2.5 text-sm text-[#52525B] leading-relaxed"
+                className="flex items-start gap-2.5 text-sm text-ink-2 leading-relaxed"
               >
-                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#C83228] shrink-0" />
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent shrink-0" />
                 <span>{term}</span>
               </li>
             ))}
@@ -224,13 +224,13 @@ async function DealDetailLoader({
         </div>
 
         {deal.sourceUrl && (
-          <div className="border-t border-[#E4DDD3] pt-4 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span className="text-[#71717A]">Sumber referensi asli:</span>
+          <div className="border-t border-hairline pt-4 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="text-ink-muted">Sumber referensi asli:</span>
             <a
               href={deal.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-semibold text-[#C83228] hover:underline break-all"
+              className="inline-flex items-center gap-1 rounded-md font-semibold text-accent hover:underline break-all pressable focus-ring"
             >
               {deal.sourceUrl}
               <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
