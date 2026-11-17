@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  images: {
+    unoptimized: true,
+  },
+  serverExternalPackages: ["playwright", "playwright-core", "@prisma/client", "prisma", "cheerio"],
   turbopack: {
     rules: {
       "*.css": {

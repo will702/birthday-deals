@@ -1,0 +1,92 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Deal {
+  id                  String   @id @default(cuid())
+  slug                String   @unique
+  brandName           String
+  brandLogoUrl        String?
+  category            String   // "F&B", "Drink & Cafe", "Cinema & Entertainment", "Beauty & Retail", "Other"
+  title               String
+  discountType        String   // "FREE_100", "DISCOUNT_PERCENT", "FREE_ITEM_WITH_PURCHASE", "VOUCHER", "BOGO"
+  discountValue       Int?     // 100 for 100% off, 50 for 50% off, etc.
+  description         String
+  termsAndConditions  String   // JSON string array of bullet points
+  claimWindow         String   // e.g. "Hari H", "H-7 s/d H+7", "Bulan Ulang Tahun"
+  requiresApp         Boolean  @default(false)
+  appName             String?
+  minRegistrationDays Int?
+  requiresIdCard      Boolean  @default(true)
+  minPurchaseIdr      Int      @default(0)
+  locations           String   @default("Nasional (Seluruh Indonesia)")
+  sourceUrl           String?
+  sourceType          String   // "SCRAPER_BRAND", "SCRAPER_AGGREGATOR", "SCRAPER_SEARCH", "COMMUNITY"
+  verificationStatus  String   @default("COMMUNITY_SUBMITTED") // "ADMIN_VERIFIED", "SCRAPER_VERIFIED", "COMMUNITY_SUBMITTED", "STALE", "EXPIRED"
+  validYear           Int      @default(2026)
+  stillWorksCount     Int      @default(1)
+  expiredReportCount  Int      @default(0)
+  freshnessScore      Int      @default(100)
+  lastScrapedAt       DateTime?
+  lastVerifiedAt      DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  proofs        ProofSubmission[]
+  verifications DealVerification[]
+
+  @@index([category])
+  @@index([verificationStatus])
+  @@index([freshnessScore])
+  @@index([discountType])
+}
+
+model ProofSubmission {
+  id             String    @id @default(cuid())
+  dealId         String
+  deal           Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  submitterName  String    @default("Anonim")
+  proofImageUrl  String?
+  proofLinkUrl   String?
+  claimedDate    DateTime?
+  outletLocation String?
+  notes          String?
+  isApproved     Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+
+  @@index([dealId])
+}
+
+model DealVerification {
+  id               String   @id @default(cuid())
+  dealId           String
+  deal             Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  voteType         String   // "STILL_WORKS" | "EXPIRED_OR_CHANGED"
+  comment          String?
+  proofImageUrl    String?
+  proofLinkUrl     String?
+  voterFingerprint String?
+  createdAt        DateTime @default(now())
+
+  @@index([dealId])
+}
+
+model ScrapeRun {
+  id           String    @id @default(cuid())
+  sourceName   String
+  status       String    // "RUNNING", "SUCCESS", "PARTIAL", "FAILED"
+  dealsFound   Int       @default(0)
+  dealsUpdated Int       @default(0)
+  dealsCreated Int       @default(0)
+  errorMessage String?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@index([startedAt])
+}
