@@ -69,18 +69,21 @@ export interface ScrapeRunDto {
   completedAt: string | null;
 }
 
-export function getDiscountBadge(discountType: string, discountValue: number | null): {
+export function getDiscountBadge(
+  discountType: string,
+  discountValue: number | null,
+): {
   label: string;
-  tone: "emerald" | "vermilion" | "neutral";
+  tone: "emerald" | "clay" | "neutral";
 } {
   if (discountType === "FREE_100" || discountValue === 100) {
     return { label: "100% GRATIS", tone: "emerald" };
   }
   if (discountType === "DISCOUNT_PERCENT" && discountValue) {
-    return { label: `DISKON ${discountValue}%`, tone: "vermilion" };
+    return { label: `DISKON ${discountValue}%`, tone: "clay" };
   }
   if (discountType === "BOGO") {
-    return { label: "BELI 1 GRATIS 1", tone: "vermilion" };
+    return { label: "BELI 1 GRATIS 1", tone: "clay" };
   }
   if (discountType === "FREE_ITEM_WITH_PURCHASE") {
     return { label: "GRATIS + MIN. ORDER", tone: "neutral" };
@@ -93,40 +96,50 @@ export function getDiscountBadge(discountType: string, discountValue: number | n
 
 export function getVerificationMeta(status: string): {
   label: string;
-  className: string;
+  tone: "emerald" | "neutral" | "info" | "warn" | "danger";
 } {
   switch (status) {
     case "ADMIN_VERIFIED":
-      return {
-        label: "Admin Verified",
-        className: "bg-success-bg text-emerald border-success-line",
-      };
+      return { label: "Admin Verified", tone: "emerald" };
     case "SCRAPER_VERIFIED":
-      return {
-        label: "Scraper Aktif",
-        className: "bg-subtle text-ink border-line-strong",
-      };
+      return { label: "Scraper Aktif", tone: "neutral" };
     case "COMMUNITY_SUBMITTED":
-      return {
-        label: "Bukti Komunitas",
-        className: "bg-info-bg text-info border-info-line",
-      };
+      return { label: "Bukti Komunitas", tone: "info" };
     case "STALE":
-      return {
-        label: "Perlu Cek Ulang",
-        className: "bg-warn-bg text-amber border-warn-line",
-      };
+      return { label: "Perlu Cek Ulang", tone: "warn" };
     case "EXPIRED":
-      return {
-        label: "Berakhir / Expired",
-        className: "bg-danger-bg text-accent border-danger-line",
-      };
+      return { label: "Berakhir / Expired", tone: "danger" };
     default:
-      return {
-        label: status,
-        className: "bg-subtle text-ink-2 border-hairline",
-      };
+      return { label: status, tone: "neutral" };
   }
+}
+
+/** Typographic anchor shared by cards and the detail page:
+ *  the deal's value becomes the headline. */
+export function getValueHeadline(
+  discountType: string,
+  discountValue: number | null,
+): {
+  numeral: string;
+  unit: string;
+  tone: "emerald" | "clay" | "ink";
+} {
+  if (discountType === "FREE_100" || discountValue === 100) {
+    return { numeral: "100%", unit: "gratis", tone: "emerald" };
+  }
+  if (discountType === "DISCOUNT_PERCENT" && discountValue) {
+    return { numeral: `${discountValue}%`, unit: "diskon", tone: "clay" };
+  }
+  if (discountType === "BOGO") {
+    return { numeral: "1+1", unit: "gratis satu", tone: "clay" };
+  }
+  if (discountType === "FREE_ITEM_WITH_PURCHASE") {
+    return { numeral: "Gratis", unit: "+ min. order", tone: "ink" };
+  }
+  if (discountType === "VOUCHER") {
+    return { numeral: "Voucher", unit: "ultah", tone: "ink" };
+  }
+  return { numeral: "Promo", unit: "ultah", tone: "ink" };
 }
 
 export function getSourceLabel(sourceType: string): string {

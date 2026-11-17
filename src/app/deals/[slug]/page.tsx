@@ -1,12 +1,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ArrowLeft, CheckSquare, ExternalLink, MapPin, Smartphone } from "lucide-react";
 import { DealVerificationPanel } from "@/components/DealVerificationPanel";
+import { Badge } from "@/components/ui/Badge";
 import {
-  getDiscountBadge,
   getSourceLabel,
+  getValueHeadline,
   getVerificationMeta,
   type DealDetailDto,
 } from "@/lib/deal-types";
@@ -17,10 +19,34 @@ function DealDetailSkeleton() {
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-6">
       <div className="h-4 w-40 rounded-md skeleton" />
-      <div className="h-48 rounded-xl border border-hairline skeleton" />
-      <div className="h-72 rounded-xl border border-hairline skeleton" />
+      <div className="h-52 rounded-xl skeleton" />
+      <div className="h-24 rounded-xl skeleton" />
+      <div className="h-72 rounded-xl skeleton" />
     </div>
   );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const deal = await prisma.deal.findUnique({
+    where: { slug },
+    select: { title: true, brandName: true, description: true, category: true },
+  });
+  if (!deal) return {};
+
+  const title = `${deal.brandName} — ${deal.title} | UltahID`;
+  const description = `${deal.description} Promo ulang tahun ${deal.brandName} kategori ${deal.category}, diverifikasi komunitas UltahID.`;
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, siteName: "UltahID" },
+    twitter: { card: "summary", title, description },
+  };
 }
 
 async function DealDetailLoader({
@@ -45,8 +71,14 @@ async function DealDetailLoader({
   }
 
   const terms = parseTermsJson(deal.termsAndConditions);
-  const discount = getDiscountBadge(deal.discountType, deal.discountValue);
   const statusMeta = getVerificationMeta(deal.verificationStatus);
+  const headline = getValueHeadline(deal.discountType, deal.discountValue);
+  const numeralTone =
+    headline.tone === "emerald"
+      ? "text-emerald"
+      : headline.tone === "clay"
+        ? "text-accent"
+        : "text-ink";
 
   const dto: DealDetailDto = {
     id: deal.id,
@@ -100,142 +132,164 @@ async function DealDetailLoader({
     })),
   };
 
-  const discountClasses =
-    discount.tone === "emerald"
-      ? "bg-success-bg text-emerald border-success-line"
-      : discount.tone === "vermilion"
-        ? "bg-danger-bg text-accent border-accent-soft"
-        : "bg-subtle text-ink border-line-strong";
-
   return (
-    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-6">
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-8 space-y-8">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 rounded-md text-sm font-semibold text-ink-2 hover:text-ink pressable focus-ring"
+        className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-ink-muted hover:text-ink pressable focus-ring"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Kembali ke Direktori Promo
+        Kembali ke Direktori
       </Link>
 
-      {/* Main Deal Summary Card */}
-      <article className="rounded-xl border border-hairline bg-surface p-6 space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
+      {/* Editorial header: the page is the surface, hairlines separate sections */}
+      <article>
+        <header>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              {deal.brandLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={deal.brandLogoUrl}
+                  alt=""
+                  width={22}
+                  height={22}
+                  className="h-[22px] w-[22px] shrink-0 rounded-full border border-hairline bg-subtle object-cover"
+                />
+              ) : null}
+              <span className="text-xs font-semibold uppercase tracking-wide text-ink-2">
+                {deal.brandName}
+              </span>
+              <span aria-hidden="true" className="text-ink-muted">
+                ·
+              </span>
+              <span className="truncate text-xs text-ink-muted">
+                {deal.category} · {getSourceLabel(deal.sourceType)}
+              </span>
+            </div>
+            <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-end gap-x-6 gap-y-3">
             <span
-              className={`inline-flex items-center rounded-md border px-2.5 py-1 font-mono text-xs font-bold tabular-nums ${discountClasses}`}
+              className={`font-serif text-[clamp(3.5rem,10vw,5.5rem)] leading-[0.9] tracking-tight ${numeralTone}`}
+              aria-label={`${headline.numeral} ${headline.unit}`}
             >
-              {discount.label}
+              {headline.numeral}
             </span>
-            <span className="rounded-md border border-hairline bg-canvas px-2.5 py-1 text-xs font-medium text-ink-2">
-              {deal.category}
-            </span>
-            <span className="rounded-md border border-hairline bg-canvas px-2.5 py-1 text-xs font-medium text-ink-2">
-              {getSourceLabel(deal.sourceType)}
+            <span className="pb-2 text-micro font-medium uppercase text-ink-muted">
+              {headline.unit}
             </span>
           </div>
 
-          <span
-            className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold ${statusMeta.className}`}
-          >
-            {statusMeta.label}
-          </span>
-        </div>
-
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-ink-muted">
-            {deal.brandName}
-          </p>
-          <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-ink">
+          <h1 className="mt-5 font-serif text-display-md text-ink">
             {deal.title}
           </h1>
-          <p className="mt-3 text-sm sm:text-base text-ink-2 leading-relaxed">
+          <p className="mt-3 max-w-[65ch] text-base leading-relaxed text-ink-2">
             {deal.description}
           </p>
-        </div>
+        </header>
 
-        <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-lg border border-hairline bg-canvas p-4 text-xs">
-          <div>
-            <dt className="text-ink-muted">Periode Klaim</dt>
-            <dd className="mt-1 font-bold text-ink">{deal.claimWindow}</dd>
+        {/* Spec strip: flat facts, no nested boxes */}
+        <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-y border-hairline py-5 lg:grid-cols-4">
+          <div className="min-w-0">
+            <dt className="text-micro font-medium uppercase text-ink-muted">
+              Periode Klaim
+            </dt>
+            <dd className="mt-1 text-sm font-semibold text-ink">
+              {deal.claimWindow}
+            </dd>
           </div>
-          <div>
-            <dt className="text-ink-muted">Minimum Transaksi</dt>
-            <dd className="mt-1 font-mono font-bold text-ink tabular-nums">
+          <div className="min-w-0">
+            <dt className="text-micro font-medium uppercase text-ink-muted">
+              Minimum Transaksi
+            </dt>
+            <dd className="mt-1 font-mono text-sm font-semibold text-ink tabular-nums">
               {formatIdr(deal.minPurchaseIdr)}
             </dd>
           </div>
-          <div>
-            <dt className="text-ink-muted">Identitas (KTP/SIM)</dt>
-            <dd className="mt-1 font-bold text-ink">
+          <div className="min-w-0">
+            <dt className="text-micro font-medium uppercase text-ink-muted">
+              Identitas (KTP/SIM)
+            </dt>
+            <dd className="mt-1 text-sm font-semibold text-ink">
               {deal.requiresIdCard ? "Wajib Ditunjukkan" : "Tidak Disebutkan"}
             </dd>
           </div>
-          <div>
-            <dt className="text-ink-muted">Terakhir Diverifikasi</dt>
-            <dd className="mt-1 font-bold text-emerald">
+          <div className="min-w-0">
+            <dt className="text-micro font-medium uppercase text-ink-muted">
+              Terakhir Diverifikasi
+            </dt>
+            <dd className="mt-1 text-sm font-semibold text-emerald">
               {formatRelativeDays(deal.lastVerifiedAt, now)}
             </dd>
           </div>
         </dl>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div className="flex items-start gap-2.5 rounded-lg border border-hairline p-3">
-            <Smartphone className="h-4 w-4 text-accent shrink-0 mt-0.5" aria-hidden="true" />
-            <div>
-              <p className="font-bold text-ink">Persyaratan Aplikasi</p>
-              <p className="mt-0.5 text-ink-2">
-                {deal.requiresApp
-                  ? `Wajib aplikasi ${deal.appName || "resmi brand"}${
-                      deal.minRegistrationDays
-                        ? ` (daftar minimal ${deal.minRegistrationDays} hari sebelum ulang tahun)`
-                        : ""
-                    }.`
-                  : "Tidak wajib daftar aplikasi beforehand — langsung datang ke outlet."}
-              </p>
-            </div>
+        {/* Requirements: two quiet panels */}
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-2xl bg-subtle/60 p-4">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-ink">
+              <Smartphone className="h-4 w-4 text-accent" aria-hidden="true" />
+              Persyaratan Aplikasi
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
+              {deal.requiresApp
+                ? `Wajib aplikasi ${deal.appName || "resmi brand"}${
+                    deal.minRegistrationDays
+                      ? ` (daftar minimal ${deal.minRegistrationDays} hari sebelum ulang tahun)`
+                      : ""
+                  }.`
+                : "Tidak wajib daftar aplikasi — langsung datang ke outlet."}
+            </p>
           </div>
 
-          <div className="flex items-start gap-2.5 rounded-lg border border-hairline p-3">
-            <MapPin className="h-4 w-4 text-emerald shrink-0 mt-0.5" aria-hidden="true" />
-            <div>
-              <p className="font-bold text-ink">Lokasi Berlaku</p>
-              <p className="mt-0.5 text-ink-2">{deal.locations}</p>
-            </div>
+          <div className="rounded-2xl bg-subtle/60 p-4">
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-ink">
+              <MapPin className="h-4 w-4 text-emerald" aria-hidden="true" />
+              Lokasi Berlaku
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
+              {deal.locations}
+            </p>
           </div>
         </div>
 
-        {/* Terms & Conditions Checklist */}
-        <div className="border-t border-hairline pt-4">
-          <h2 className="text-sm font-bold text-ink flex items-center gap-2">
-            <CheckSquare className="h-4 w-4 text-emerald" aria-hidden="true" />
+        {/* Terms & Conditions */}
+        <section className="mt-8">
+          <h2 className="flex items-center gap-2 font-serif text-display-md text-ink">
+            <CheckSquare className="h-5 w-5 text-emerald" aria-hidden="true" />
             Syarat &amp; Ketentuan Klaim
           </h2>
-          <ul className="mt-2.5 space-y-2">
+          <ul className="mt-4 space-y-2.5">
             {terms.map((term, idx) => (
               <li
                 key={idx}
-                className="flex items-start gap-2.5 text-sm text-ink-2 leading-relaxed"
+                className="flex items-start gap-3 text-sm text-ink-2 leading-relaxed"
               >
-                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent shrink-0" />
+                <span
+                  aria-hidden="true"
+                  className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-accent-vivid"
+                />
                 <span>{term}</span>
               </li>
             ))}
           </ul>
-        </div>
+        </section>
 
         {deal.sourceUrl && (
-          <div className="border-t border-hairline pt-4 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <footer className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-5 text-xs">
             <span className="text-ink-muted">Sumber referensi asli:</span>
             <a
               href={deal.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-md font-semibold text-accent hover:underline break-all pressable focus-ring"
+              className="inline-flex max-w-full items-center gap-1 rounded-md font-semibold text-accent hover:text-accent-hover underline-offset-4 hover:underline break-all pressable focus-ring"
             >
               {deal.sourceUrl}
               <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             </a>
-          </div>
+          </footer>
         )}
       </article>
 

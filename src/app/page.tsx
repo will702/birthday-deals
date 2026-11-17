@@ -7,17 +7,31 @@ import { parseTermsJson } from "@/lib/validation";
 
 function DirectorySkeleton() {
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 space-y-6">
-      <div className="border-b border-hairline pb-6 space-y-3">
-        <div className="h-8 w-80 rounded-md skeleton" />
+    <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="pt-10 sm:pt-14 pb-8 max-w-3xl space-y-4">
+        <div className="h-12 w-[22rem] max-w-full rounded-lg skeleton" />
         <div className="h-4 w-2/3 rounded-md skeleton" />
+        <div className="h-4 w-1/2 rounded-md skeleton" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="border-y border-hairline py-4 space-y-3">
+        <div className="h-10 w-full rounded-lg skeleton" />
+        <div className="h-8 w-2/3 rounded-full skeleton" />
+      </div>
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, idx) => (
           <div
             key={idx}
-            className="h-60 rounded-xl border border-hairline skeleton"
-          />
+            className="h-[22rem] rounded-2xl border border-hairline bg-surface p-5 space-y-3"
+          >
+            <div className="flex justify-between">
+              <div className="h-4 w-28 rounded-md skeleton" />
+              <div className="h-4 w-20 rounded-md skeleton" />
+            </div>
+            <div className="h-10 w-24 rounded-md skeleton" />
+            <div className="h-4 w-4/5 rounded-md skeleton" />
+            <div className="h-4 w-3/5 rounded-md skeleton" />
+            <div className="h-12 w-full rounded-md skeleton" />
+          </div>
         ))}
       </div>
     </div>

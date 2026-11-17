@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Link2, Upload, X } from "lucide-react";
 import { DEAL_CATEGORIES, DISCOUNT_TYPES } from "@/lib/validation";
+import type { DealSummaryDto } from "@/lib/deal-types";
+import { DealCard } from "./DealCard";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { FieldLabel, Input, Select, Textarea } from "@/components/ui/Field";
 
 interface LinkPreview {
   title: string | null;
@@ -12,6 +17,38 @@ interface LinkPreview {
   siteName: string | null;
   accessible: boolean;
   blockedReason: string | null;
+}
+
+function SectionStep({
+  step,
+  title,
+  required,
+  children,
+  className = "",
+}: {
+  step: number;
+  title: string;
+  required?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-2xl border border-hairline bg-surface p-5 sm:p-6 space-y-5 ${className}`}
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink font-mono text-xs font-semibold text-white"
+        >
+          {step}
+        </span>
+        <h2 className="font-serif text-xl tracking-tight text-ink">{title}</h2>
+        {required ? <Badge tone="clay">Wajib</Badge> : null}
+      </div>
+      {children}
+    </section>
+  );
 }
 
 export function SubmitDealForm() {
@@ -44,6 +81,11 @@ export function SubmitDealForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  // Prerender-safe clock for the live preview: a fixed epoch at SSR, real time after mount.
+  const [previewNowIso, setPreviewNowIso] = useState("2026-01-01T00:00:00.000Z");
+  useEffect(() => {
+    setPreviewNowIso(new Date().toISOString());
+  }, []);
 
   async function handleImageUpload(file: File | undefined) {
     if (uploading) return;
@@ -161,67 +203,104 @@ export function SubmitDealForm() {
     }
   }
 
+  // Live preview: the real card, fed by the form's current state.
+  const previewDeal: DealSummaryDto = {
+    id: "preview",
+    slug: "preview",
+    brandName: brandName || "Nama Brand",
+    brandLogoUrl: null,
+    category,
+    title: title || "Judul penawaran promo akan tampil di sini",
+    discountType,
+    discountValue:
+      discountType === "FREE_100"
+        ? 100
+        : discountValue
+          ? Number(discountValue)
+          : null,
+    description: description || "Ringkasan cara klaim tampil di sini.",
+    termsAndConditions: [],
+    claimWindow: claimWindow || "-",
+    requiresApp,
+    appName: appName || null,
+    minRegistrationDays: requiresApp && minRegistrationDays ? Number(minRegistrationDays) : null,
+    requiresIdCard,
+    minPurchaseIdr: Number(minPurchaseIdr || 0),
+    locations,
+    sourceUrl: null,
+    sourceType: "COMMUNITY",
+    verificationStatus: "COMMUNITY_SUBMITTED",
+    validYear: new Date(previewNowIso).getFullYear(),
+    stillWorksCount: 1,
+    expiredReportCount: 0,
+    freshnessScore: 100,
+    lastScrapedAt: null,
+    lastVerifiedAt: previewNowIso,
+    createdAt: previewNowIso,
+    proofCount: proofImageUrl || proofLinkUrl ? 1 : 0,
+    verificationCount: 0,
+    latestProofImageUrl: proofImageUrl,
+  };
+
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 space-y-6">
+      <div className="lg:col-span-2 space-y-5">
         {/* Section 1: Identitas Promo */}
-        <section className="rounded-xl border border-hairline bg-surface p-5 space-y-4">
-          <h2 className="text-base font-bold text-ink">1. Informasi Brand &amp; Diskon</h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <SectionStep step={1} title="Informasi Brand & Diskon">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="brandName" className="block text-xs font-semibold text-ink mb-1">
-                Nama Brand (Indonesia) *
-              </label>
-              <input
+              <FieldLabel htmlFor="brandName" required>
+                Nama Brand (Indonesia)
+              </FieldLabel>
+              <Input
                 id="brandName"
                 required
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 placeholder="Mis. Boost Juice Indonesia / Ta Wan"
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="mt-1.5"
               />
             </div>
 
             <div>
-              <label htmlFor="category" className="block text-xs font-semibold text-ink mb-1">
-                Kategori *
-              </label>
-              <select
+              <FieldLabel htmlFor="category" required>
+                Kategori
+              </FieldLabel>
+              <Select
                 id="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as (typeof DEAL_CATEGORIES)[number])}
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="mt-1.5"
               >
                 {DEAL_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
 
           <div>
-            <label htmlFor="title" className="block text-xs font-semibold text-ink mb-1">
-              Judul Penawaran Promo *
-            </label>
-            <input
+            <FieldLabel htmlFor="title" required>
+              Judul Penawaran Promo
+            </FieldLabel>
+            <Input
               id="title"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Mis. Gratis 1 Original Smoothie (100% Off) atau Diskon 50% Menu Utama"
-              className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+              className="mt-1.5"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label htmlFor="discountType" className="block text-xs font-semibold text-ink mb-1">
-                Jenis Potongan *
-              </label>
-              <select
+              <FieldLabel htmlFor="discountType" required>
+                Jenis Potongan
+              </FieldLabel>
+              <Select
                 id="discountType"
                 value={discountType}
                 onChange={(e) => {
@@ -230,21 +309,19 @@ export function SubmitDealForm() {
                   if (next === "FREE_100") setDiscountValue("100");
                   else if (next === "BOGO") setDiscountValue("50");
                 }}
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="mt-1.5"
               >
                 <option value="FREE_100">100% Gratis (Free Item)</option>
                 <option value="DISCOUNT_PERCENT">Diskon Persentase (%)</option>
                 <option value="BOGO">Beli 1 Gratis 1 (BOGO)</option>
                 <option value="FREE_ITEM_WITH_PURCHASE">Gratis dgn Min. Order</option>
                 <option value="VOUCHER">Voucher Potongan</option>
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label htmlFor="discountValue" className="block text-xs font-semibold text-ink mb-1">
-                Nilai Diskon (%)
-              </label>
-              <input
+              <FieldLabel htmlFor="discountValue">Nilai Diskon (%)</FieldLabel>
+              <Input
                 id="discountValue"
                 type="number"
                 min={1}
@@ -253,75 +330,69 @@ export function SubmitDealForm() {
                 value={discountType === "FREE_100" ? "100" : discountValue}
                 onChange={(e) => setDiscountValue(e.target.value)}
                 placeholder="50"
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm font-mono tabular-nums disabled:opacity-60"
+                className="mt-1.5 font-mono tabular-nums"
               />
             </div>
 
             <div>
-              <label htmlFor="minPurchaseIdr" className="block text-xs font-semibold text-ink mb-1">
-                Min. Belanja (Rp)
-              </label>
-              <input
+              <FieldLabel htmlFor="minPurchaseIdr">Min. Belanja (Rp)</FieldLabel>
+              <Input
                 id="minPurchaseIdr"
                 type="number"
                 min={0}
                 step={5000}
                 value={minPurchaseIdr}
                 onChange={(e) => setMinPurchaseIdr(e.target.value)}
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm font-mono tabular-nums"
+                className="mt-1.5 font-mono tabular-nums"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="description" className="block text-xs font-semibold text-ink mb-1">
-              Ringkasan Cara Klaim *
-            </label>
-            <textarea
+            <FieldLabel htmlFor="description" required>
+              Ringkasan Cara Klaim
+            </FieldLabel>
+            <Textarea
               id="description"
               required
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Jelaskan cara klaim di kasir atau aplikasi, produk apa saja yang termasuk, dll."
-              className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+              className="mt-1.5"
             />
           </div>
-        </section>
+        </SectionStep>
 
         {/* Section 2: Syarat & Periode Klaim */}
-        <section className="rounded-xl border border-hairline bg-surface p-5 space-y-4">
-          <h2 className="text-base font-bold text-ink">2. Syarat &amp; Periode Klaim</h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <SectionStep step={2} title="Syarat & Periode Klaim">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="claimWindow" className="block text-xs font-semibold text-ink mb-1">
-                Jendela Waktu Klaim *
-              </label>
-              <input
+              <FieldLabel htmlFor="claimWindow" required>
+                Jendela Waktu Klaim
+              </FieldLabel>
+              <Input
                 id="claimWindow"
                 required
                 value={claimWindow}
                 onChange={(e) => setClaimWindow(e.target.value)}
                 placeholder="Mis. Hari H, H-7 s/d H+7, Bulan Ulang Tahun"
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="mt-1.5"
               />
             </div>
 
             <div>
-              <label htmlFor="locations" className="block text-xs font-semibold text-ink mb-1">
-                Cakupan Outlet
-              </label>
-              <input
+              <FieldLabel htmlFor="locations">Cakupan Outlet</FieldLabel>
+              <Input
                 id="locations"
                 value={locations}
                 onChange={(e) => setLocations(e.target.value)}
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="mt-1.5"
               />
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-6 pt-1">
+          <div className="flex flex-wrap gap-6">
             <label className="inline-flex items-center gap-2 text-sm font-medium text-ink cursor-pointer">
               <input
                 type="checkbox"
@@ -344,97 +415,98 @@ export function SubmitDealForm() {
           </div>
 
           {requiresApp && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-hairline bg-canvas p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl bg-canvas p-4">
               <div>
-                <label htmlFor="appName" className="block text-xs font-semibold text-ink mb-1">
-                  Nama Aplikasi *
-                </label>
-                <input
+                <FieldLabel htmlFor="appName" required>
+                  Nama Aplikasi
+                </FieldLabel>
+                <Input
                   id="appName"
                   required={requiresApp}
                   value={appName}
                   onChange={(e) => setAppName(e.target.value)}
                   placeholder="Mis. MyBoost / Boga App"
-                  className="field w-full rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-sm"
+                  className="mt-1.5"
                 />
               </div>
               <div>
-                <label
-                  htmlFor="minRegistrationDays"
-                  className="block text-xs font-semibold text-ink mb-1"
-                >
+                <FieldLabel htmlFor="minRegistrationDays">
                   Minimal Daftar Sebelum Hari H (Hari)
-                </label>
-                <input
+                </FieldLabel>
+                <Input
                   id="minRegistrationDays"
                   type="number"
                   min={0}
                   max={365}
                   value={minRegistrationDays}
                   onChange={(e) => setMinRegistrationDays(e.target.value)}
-                  className="field w-full rounded-lg border border-line-strong bg-surface px-3 py-1.5 text-sm font-mono tabular-nums"
+                  className="mt-1.5 font-mono tabular-nums"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label htmlFor="termsText" className="block text-xs font-semibold text-ink mb-1">
-              Daftar Syarat &amp; Ketentuan (1 poin per baris) *
-            </label>
-            <textarea
+            <FieldLabel htmlFor="termsText" required>
+              Daftar Syarat &amp; Ketentuan (1 poin per baris)
+            </FieldLabel>
+            <Textarea
               id="termsText"
               rows={4}
               value={termsText}
               onChange={(e) => setTermsText(e.target.value)}
-              className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+              className="mt-1.5"
             />
           </div>
-        </section>
+        </SectionStep>
 
         {/* Section 3: MANDATORY PROOF */}
-        <section className="rounded-xl border-2 border-ink bg-surface p-5 space-y-4">
-          <div>
-            <h2 className="text-base font-bold text-ink">
-              3. Lampirkan Bukti Asli (Wajib Salah Satu atau Keduanya) *
-            </h2>
-            <p className="text-xs text-ink-2 mt-0.5">
-              Agar direktori bebas dari info palsu atau promo kedaluwarsa, kirim foto struk/screenshot voucher aplikasi atau tautan pengumuman resmi brand.
-            </p>
-          </div>
+        <SectionStep
+          step={3}
+          title="Lampirkan Bukti Asli"
+          required
+          className="border-accent-vivid/45"
+        >
+          <p className="-mt-2 text-sm leading-relaxed text-ink-2">
+            Salah satu atau keduanya: agar direktori bebas dari info palsu,
+            kirim foto struk/screenshot voucher aplikasi atau tautan
+            pengumuman resmi brand.
+          </p>
 
           <div className="space-y-2">
-            <label htmlFor="proofLinkUrl" className="block text-xs font-semibold text-ink">
+            <FieldLabel htmlFor="proofLinkUrl">
               Tautan Sumber Resmi / Postingan IG / TikTok
-            </label>
+            </FieldLabel>
             <div className="flex gap-2">
-              <input
+              <Input
                 id="proofLinkUrl"
                 type="url"
                 value={proofLinkUrl}
                 onChange={(e) => setProofLinkUrl(e.target.value)}
                 placeholder="https://www.instagram.com/p/... atau https://brand.co.id/promo"
-                className="field flex-1 rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="flex-1"
               />
-              <button
-                type="button"
+              <Button
+                variant="outline"
                 disabled={!proofLinkUrl.trim() || checkingLink}
                 onClick={handleInspectLink}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-2 text-xs font-semibold text-ink hover:bg-subtle disabled:opacity-50 pressable focus-ring"
+                className="shrink-0"
               >
                 <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
                 {checkingLink ? "Mengecek..." : "Cek Link"}
-              </button>
+              </Button>
             </div>
 
             {linkPreview && (
-              <div className="reveal rounded-lg border border-hairline bg-canvas p-3 text-xs">
+              <div className="reveal rounded-xl bg-canvas p-3.5 text-xs">
                 {linkPreview.accessible ? (
                   <div className="space-y-1">
                     <p className="font-bold text-emerald">
                       Tautan terbaca ({linkPreview.siteName || "Web"})
                     </p>
-                    {linkPreview.title && <p className="font-semibold text-ink">{linkPreview.title}</p>}
+                    {linkPreview.title && (
+                      <p className="font-semibold text-ink">{linkPreview.title}</p>
+                    )}
                     {linkPreview.description && (
                       <p className="text-ink-2 line-clamp-2">{linkPreview.description}</p>
                     )}
@@ -449,8 +521,8 @@ export function SubmitDealForm() {
           </div>
 
           <div className="space-y-2">
-            <span className="block text-xs font-semibold text-ink">
-              Upload Screenshot Voucher / Foto Struk Pembelian (JPG, PNG, WebP maks 4MB)
+            <span className="flex items-baseline gap-1 text-xs font-semibold text-ink">
+              Upload Screenshot Voucher / Foto Struk (JPG, PNG, WebP maks 4MB)
             </span>
             <div className="flex flex-wrap items-center gap-3">
               <label
@@ -474,7 +546,7 @@ export function SubmitDealForm() {
                   setDragOver(false);
                   handleImageUpload(e.dataTransfer.files?.[0]);
                 }}
-                className="pressable inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-line-strong bg-canvas px-4 py-3 text-xs font-semibold text-ink hover:border-accent data-[dragover=true]:border-accent data-[dragover=true]:bg-accent/5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
+                className="pressable inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-line-strong bg-canvas px-4 py-3 text-xs font-semibold text-ink hover:border-accent data-[dragover=true]:border-accent data-[dragover=true]:bg-accent-soft/40 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
               >
                 <Upload className="h-4 w-4 text-accent" aria-hidden="true" />
                 {uploading ? "Mengunggah gambar..." : "Pilih atau Taruh Gambar Bukti"}
@@ -487,7 +559,7 @@ export function SubmitDealForm() {
               </label>
 
               {proofImageUrl && (
-                <div className="reveal relative rounded-lg border border-success-line bg-success-bg p-1.5 flex items-center gap-2">
+                <div className="reveal rounded-lg border border-success-line bg-success-bg p-1.5 flex items-center gap-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={proofImageUrl}
@@ -512,107 +584,80 @@ export function SubmitDealForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="submitterName" className="block text-xs font-semibold text-ink mb-1">
-                Nama Kontributor (Opsional)
-              </label>
-              <input
+              <FieldLabel htmlFor="submitterName">Nama Kontributor (opsional)</FieldLabel>
+              <Input
                 id="submitterName"
                 value={submitterName}
                 onChange={(e) => setSubmitterName(e.target.value)}
                 placeholder="Mis. Rina W."
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="mt-1.5"
               />
             </div>
             <div>
-              <label htmlFor="outletLocation" className="block text-xs font-semibold text-ink mb-1">
-                Outlet Tempat Klaim (Opsional)
-              </label>
-              <input
+              <FieldLabel htmlFor="outletLocation">
+                Outlet Tempat Klaim (opsional)
+              </FieldLabel>
+              <Input
                 id="outletLocation"
                 value={outletLocation}
                 onChange={(e) => setOutletLocation(e.target.value)}
                 placeholder="Mis. Kota Kasablanka, Jakarta"
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="mt-1.5"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="proofNotes" className="block text-xs font-semibold text-ink mb-1">
-              Catatan Bukti (Opsional)
-            </label>
-            <input
+            <FieldLabel htmlFor="proofNotes">Catatan Bukti (opsional)</FieldLabel>
+            <Input
               id="proofNotes"
               value={proofNotes}
               onChange={(e) => setProofNotes(e.target.value)}
               placeholder="Mis. Diklaim tanggal 15 Nov 2026, kasir langsung ACC."
-              className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+              className="mt-1.5"
             />
           </div>
-        </section>
+        </SectionStep>
 
         {error && (
           <div
             role="alert"
-            className="reveal rounded-lg border border-danger-line bg-danger-bg p-3 text-sm font-medium text-accent"
+            className="reveal rounded-xl border border-danger-line bg-danger-bg p-3.5 text-sm font-medium text-danger-ink"
           >
             {error}
           </div>
         )}
 
         <div className="flex items-center justify-end gap-3">
-          <button
-            type="submit"
-            disabled={submitting || uploading}
-            className="rounded-lg bg-accent px-6 py-2.5 text-sm font-bold text-white hover:bg-accent-hover disabled:opacity-60 pressable focus-ring"
-          >
+          <Button type="submit" size="lg" disabled={submitting || uploading}>
             {submitting ? "Mempublikasikan..." : "Publikasikan Temuan Promo"}
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Sidebar Preview & Proof Standard */}
-      <aside className="space-y-4">
-        <div className="rounded-xl border border-hairline bg-surface p-4 space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-ink-muted">
+      {/* Sidebar: live preview (the real card) + proof standard */}
+      <aside className="space-y-4 lg:sticky lg:top-24 self-start">
+        <div className="space-y-3">
+          <h3 className="text-micro font-semibold uppercase text-ink-muted">
             Pratinjau Kartu Promo
           </h3>
-          <div className="rounded-lg border border-hairline bg-canvas p-3.5 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="rounded-md border border-success-line bg-success-bg px-2 py-0.5 font-mono text-[11px] font-bold text-emerald">
-                {discountType === "FREE_100"
-                  ? "100% GRATIS"
-                  : discountType === "DISCOUNT_PERCENT"
-                    ? `DISKON ${discountValue || "?"}%`
-                    : discountType === "BOGO"
-                      ? "BELI 1 GRATIS 1"
-                      : "PROMO ULTAH"}
-              </span>
-              <span className="rounded-md border border-info-line bg-info-bg px-2 py-0.5 text-[10px] font-semibold text-info">
-                Bukti Komunitas
-              </span>
-            </div>
-            <p className="text-xs font-semibold uppercase text-ink-2">
-              {brandName || "Nama Brand"} · {category}
-            </p>
-            <p className="text-sm font-bold text-ink">
-              {title || "Judul penawaran promo akan tampil di sini"}
-            </p>
-            <p className="text-xs text-ink-2">
-              Klaim: {claimWindow || "-"} · Min. Rp{Number(minPurchaseIdr || 0).toLocaleString("id-ID")}
-            </p>
-          </div>
+          <DealCard deal={previewDeal} nowIso={previewNowIso} preview />
         </div>
 
-        <div className="rounded-xl border border-hairline bg-subtle/70 p-4 space-y-2 text-xs text-ink-2">
-          <h3 className="font-bold text-ink">Kenapa Wajib Bukti?</h3>
+        <div className="rounded-2xl bg-subtle/60 p-5 space-y-2.5 text-xs leading-relaxed text-ink-2">
+          <h3 className="font-serif text-base tracking-tight text-ink">
+            Kenapa wajib bukti?
+          </h3>
           <p>
-            Banyak daftar promo ulang tahun di internet yang sudah kedaluwarsa atau diam-diam berubah syarat minimum belanjanya.
+            Banyak daftar promo ulang tahun di internet yang sudah kedaluwarsa
+            atau diam-diam berubah syarat minimum belanjanya.
           </p>
           <p>
-            Dengan melampirkan foto struk, screenshot voucher di aplikasi, atau link pengumuman resmi, status promo terjamin valid dan bisa dikonfirmasi ulang oleh pengguna lain.
+            Dengan melampirkan foto struk, screenshot voucher di aplikasi, atau
+            link pengumuman resmi, status promo terjamin valid dan bisa
+            dikonfirmasi ulang oleh pengguna lain.
           </p>
         </div>
       </aside>

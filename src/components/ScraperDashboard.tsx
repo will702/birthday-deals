@@ -4,6 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play, RefreshCw } from "lucide-react";
 import type { ScrapeRunDto } from "@/lib/deal-types";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { StatTile } from "@/components/ui/StatTile";
 
 interface ScraperDashboardProps {
   initialRuns: ScrapeRunDto[];
@@ -32,6 +36,13 @@ const ADAPTER_OPTIONS = [
     detail: "Pencarian artikel roundup promo ulang tahun Indonesia 2026 terbaru",
   },
 ];
+
+function runStatusTone(status: string): BadgeTone {
+  if (status === "SUCCESS") return "emerald";
+  if (status === "PARTIAL") return "warn";
+  if (status === "FAILED") return "danger";
+  return "neutral";
+}
 
 export function ScraperDashboard({
   initialRuns,
@@ -107,76 +118,63 @@ export function ScraperDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Real Summary Telemetry */}
-      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-hairline bg-surface p-4">
-          <dt className="text-xs text-ink-muted">Total Promo Terdata</dt>
-          <dd className="mt-1 font-mono text-2xl font-bold text-ink tabular-nums">
-            {summary.totalDeals}
-          </dd>
+      {/* Summary telemetry */}
+      <dl className="grid grid-cols-2 sm:grid-cols-4 rounded-2xl border border-hairline bg-surface sm:divide-x divide-y sm:divide-y-0 divide-hairline overflow-hidden">
+        <div className="p-4 sm:p-5">
+          <StatTile label="Total Promo Terdata" value={summary.totalDeals} />
         </div>
-        <div className="rounded-xl border border-success-line bg-success-bg p-4">
-          <dt className="text-xs text-emerald">Promo Aktif</dt>
-          <dd className="mt-1 font-mono text-2xl font-bold text-emerald tabular-nums">
-            {summary.activeDeals}
-          </dd>
+        <div className="p-4 sm:p-5">
+          <StatTile label="Promo Aktif" value={summary.activeDeals} tone="success" />
         </div>
-        <div className="rounded-xl border border-amber/30 bg-amber/10 p-4">
-          <dt className="text-xs text-amber">Perlu Cek Ulang (Stale)</dt>
-          <dd className="mt-1 font-mono text-2xl font-bold text-amber tabular-nums">
-            {summary.staleDeals}
-          </dd>
+        <div className="p-4 sm:p-5">
+          <StatTile label="Perlu Cek Ulang" value={summary.staleDeals} tone="warn" />
         </div>
-        <div className="rounded-xl border border-danger-line bg-danger-bg p-4">
-          <dt className="text-xs text-accent">Berakhir (Expired)</dt>
-          <dd className="mt-1 font-mono text-2xl font-bold text-accent tabular-nums">
-            {summary.expiredDeals}
-          </dd>
+        <div className="p-4 sm:p-5">
+          <StatTile label="Berakhir" value={summary.expiredDeals} tone="danger" />
         </div>
       </dl>
 
       {/* Control Panel */}
-      <section className="rounded-xl border border-hairline bg-surface p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <section className="rounded-2xl border border-hairline bg-surface p-5 sm:p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
-            <h2 className="text-base font-bold text-ink">
-              Konfigurasi Sumber Scraper Indonesia
+            <h2 className="font-serif text-xl tracking-tight text-ink">
+              Konfigurasi Sumber Scraper
             </h2>
-            <p className="text-xs text-ink-2 mt-0.5">
-              Pilih modul sumber yang ingin dijalankan. Situs yang dilindungi anti-bot/CAPTCHA otomatis dilewati tanpa bypass.
+            <p className="mt-1 text-sm text-ink-2">
+              Pilih modul sumber yang ingin dijalankan. Situs yang dilindungi
+              anti-bot/CAPTCHA otomatis dilewati tanpa bypass.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <input
               type="password"
               value={adminToken}
               onChange={(e) => setAdminToken(e.target.value)}
               placeholder="Token admin"
               aria-label="Token admin"
-              className="field rounded-lg border border-line-strong bg-surface px-2.5 py-1 text-xs"
+              className="field rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-xs"
             />
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               disabled={isRunning}
               onClick={() => handleRunScraper(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-canvas px-3 py-2 text-xs font-semibold text-ink hover:bg-subtle disabled:opacity-60 pressable focus-ring"
             >
               <RefreshCw
                 className={`h-3.5 w-3.5 ${isRunning ? "animate-spin" : ""}`}
                 aria-hidden="true"
               />
-              Cek Freshness Link Saja
-            </button>
+              Cek Freshness Saja
+            </Button>
 
-            <button
-              type="button"
+            <Button
               disabled={isRunning || (selectedSources.length === 0 && !runFreshness)}
               onClick={() => handleRunScraper(false)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-bold text-white hover:bg-accent-hover disabled:opacity-60 pressable focus-ring"
             >
               <Play className="h-3.5 w-3.5" aria-hidden="true" />
-              {isRunning ? "Sedang Scraping..." : "Jalankan Scraper Sekarang"}
-            </button>
+              {isRunning ? "Sedang Scraping..." : "Jalankan Scraper"}
+            </Button>
           </div>
         </div>
 
@@ -186,7 +184,11 @@ export function ScraperDashboard({
             return (
               <label
                 key={opt.key}
-                className="cursor-pointer rounded-lg border border-hairline bg-surface p-3.5 flex items-start gap-2.5 transition-colors hover:border-line-strong has-[:checked]:border-accent has-[:checked]:bg-accent/5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
+                className={`cursor-pointer rounded-xl border p-3.5 flex items-start gap-2.5 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${
+                  checked
+                    ? "border-accent/50 bg-accent-soft/40"
+                    : "border-hairline bg-canvas hover:border-line-strong"
+                }`}
               >
                 <input
                   type="checkbox"
@@ -216,13 +218,13 @@ export function ScraperDashboard({
         </label>
 
         {error && (
-          <p role="alert" className="reveal text-xs font-semibold text-accent">
+          <p role="alert" className="reveal text-xs font-semibold text-danger-ink">
             {error}
           </p>
         )}
 
         {lastOutputNotes.length > 0 && (
-          <div className="reveal rounded-lg border border-success-line bg-success-bg p-3 space-y-1 text-xs text-emerald">
+          <div className="reveal rounded-xl bg-success-bg p-3.5 space-y-1 text-xs text-emerald">
             <p className="font-bold">Hasil Eksekusi Terbaru:</p>
             <ul className="list-disc pl-4 space-y-0.5">
               {lastOutputNotes.map((line, i) => (
@@ -234,17 +236,20 @@ export function ScraperDashboard({
       </section>
 
       {/* Run History Table */}
-      <section className="rounded-xl border border-hairline bg-surface overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-hairline flex items-center justify-between">
-          <h2 className="text-base font-bold text-ink">
-            Riwayat Eksekusi Scraper ({runs.length})
+      <section className="rounded-2xl border border-hairline bg-surface overflow-hidden">
+        <div className="px-5 py-4 border-b border-hairline flex items-center justify-between gap-2">
+          <h2 className="font-serif text-xl tracking-tight text-ink">
+            Riwayat Eksekusi ({runs.length})
           </h2>
-          <span className="text-xs text-ink-muted">CLI: npm run scrape</span>
+          <span className="text-xs text-ink-muted font-mono">npm run scrape</span>
         </div>
 
         {runs.length === 0 ? (
-          <div className="p-8 text-center text-sm text-ink-2">
-            Belum ada catatan eksekusi scraper. Klik &quot;Jalankan Scraper Sekarang&quot; di atas.
+          <div className="p-6">
+            <EmptyState
+              title="Belum ada catatan eksekusi"
+              description='Klik "Jalankan Scraper" di atas untuk memulai pengambilan data pertama.'
+            />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -261,51 +266,41 @@ export function ScraperDashboard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
-                {runs.map((run) => {
-                  const statusColor =
-                    run.status === "SUCCESS"
-                      ? "bg-success-bg text-emerald border-success-line"
-                      : run.status === "PARTIAL"
-                        ? "bg-amber/10 text-amber border-amber/30"
-                        : run.status === "FAILED"
-                          ? "bg-danger-bg text-accent border-danger-line"
-                          : "bg-subtle text-ink border-line-strong";
-
-                  return (
-                    <tr key={run.id} className="hover:bg-canvas/60">
-                      <td className="px-4 py-3 font-semibold text-ink">
-                        {run.sourceName}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold ${statusColor}`}
-                        >
-                          {run.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono tabular-nums">
-                        {run.dealsFound}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono tabular-nums text-emerald font-semibold">
-                        +{run.dealsCreated}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono tabular-nums">
-                        {run.dealsUpdated}
-                      </td>
-                      <td className="px-4 py-3 text-ink-2 whitespace-nowrap font-mono tabular-nums">
-                        {new Date(run.startedAt).toLocaleString("id-ID", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </td>
-                      <td className="px-4 py-3 text-ink-2 max-w-xs truncate" title={run.errorMessage || ""}>
-                        {run.errorMessage || "-"}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {runs.map((run) => (
+                  <tr key={run.id} className="hover:bg-subtle/40">
+                    <td className="px-4 py-3 font-semibold text-ink">
+                      {run.sourceName}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={runStatusTone(run.status)} numeric>
+                        {run.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums">
+                      {run.dealsFound}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-emerald font-semibold">
+                      +{run.dealsCreated}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums">
+                      {run.dealsUpdated}
+                    </td>
+                    <td className="px-4 py-3 text-ink-2 whitespace-nowrap font-mono tabular-nums">
+                      {new Date(run.startedAt).toLocaleString("id-ID", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td
+                      className="px-4 py-3 text-ink-2 max-w-xs truncate"
+                      title={run.errorMessage || ""}
+                    >
+                      {run.errorMessage || "—"}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

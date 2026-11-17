@@ -1,35 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  --bg-canvas: #faf7f2;
+  color-scheme: light;
+
+  /* Warm ivory ground (Anthropic base) */
+  --bg-canvas: #faf9f5;
   --bg-surface: #ffffff;
-  --bg-subtle: #f3ede3;
-  --ink-primary: #18181b;
-  --ink-secondary: #52525b;
-  --ink-muted: #71717a;
-  --border-hairline: #e4ddd3;
-  --border-strong: #d3c8b8;
-  --accent-primary: #c83228;
-  --accent-primary-hover: #9f221a;
-  --accent-soft: #facbc7;
-  --accent-emerald: #146c43;
-  --accent-amber: #b45309;
-  --danger-bg: #fef2f2;
-  --danger-line: #fecaca;
-  --success-bg: #ecfdf3;
-  --success-line: #bce3cd;
-  --info-bg: #eff6ff;
-  --info-line: #bfdbfe;
-  --info-ink: #1d4ed8;
-  --warn-bg: #fffbeb;
-  --warn-line: #fde68a;
+  --bg-subtle: #f0eee6;
+  --ink-primary: #1f1e1b;
+  --ink-secondary: #53514a;
+  --ink-muted: #75716a;
+  --border-hairline: #e8e4db;
+  --border-strong: #d9d3c6;
+
+  /* Clay accent */
+  --accent-primary: #b4552f;
+  --accent-primary-hover: #9a4423;
+  --accent-vivid: #c96442;
+  --accent-soft: #f6e7de;
+  --accent-emerald: #14713f;
+  --accent-amber: #96601a;
+
+  /* Semantic, tinted warm */
+  --danger-bg: #faeae4;
+  --danger-line: #ecccbf;
+  --danger-ink: #a03123;
+  --success-bg: #e9f2e7;
+  --success-line: #cfe0c8;
+  --info-bg: #e9eff5;
+  --info-line: #ccdae6;
+  --info-ink: #33557a;
+  --warn-bg: #faf3e0;
+  --warn-line: #e8d9b0;
 
   /* Motion */
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --dur-press: 120ms;
   --dur-ui: 200ms;
+
+  scroll-timeline: --page y;
 }
 
 @theme inline {
@@ -46,11 +57,13 @@
   --color-line-strong: var(--border-strong);
   --color-accent: var(--accent-primary);
   --color-accent-hover: var(--accent-primary-hover);
+  --color-accent-vivid: var(--accent-vivid);
   --color-accent-soft: var(--accent-soft);
   --color-emerald: var(--accent-emerald);
   --color-amber: var(--accent-amber);
   --color-danger-bg: var(--danger-bg);
   --color-danger-line: var(--danger-line);
+  --color-danger-ink: var(--danger-ink);
   --color-success-bg: var(--success-bg);
   --color-success-line: var(--success-line);
   --color-info-bg: var(--info-bg);
@@ -59,8 +72,28 @@
   --color-warn-bg: var(--warn-bg);
   --color-warn-line: var(--warn-line);
 
-  --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-newsreader), ui-serif, Georgia, "Times New Roman", serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+
+  /* Editorial display scale: tight leading, tighter tracking as it grows */
+  --text-display-xl: clamp(2.625rem, 1.7rem + 3.4vw, 4.25rem);
+  --text-display-xl--line-height: 1.02;
+  --text-display-xl--letter-spacing: -0.032em;
+  --text-display-xl--font-weight: 500;
+  --text-display-lg: clamp(2rem, 1.55rem + 1.9vw, 2.875rem);
+  --text-display-lg--line-height: 1.06;
+  --text-display-lg--letter-spacing: -0.026em;
+  --text-display-lg--font-weight: 500;
+  --text-display-md: clamp(1.625rem, 1.4rem + 1vw, 2.125rem);
+  --text-display-md--line-height: 1.12;
+  --text-display-md--letter-spacing: -0.02em;
+  --text-display-md--font-weight: 500;
+
+  /* Micro labels: positive tracking for legibility (Apple) */
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1rem;
+  --text-micro--letter-spacing: 0.04em;
 }
 
 html {
@@ -72,9 +105,21 @@ body {
   color: var(--ink-primary);
   font-family: var(--font-sans);
   font-optical-sizing: auto;
-  line-height: 1.5;
+  line-height: 1.55;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Browser surfaces carry the design: selection, caret */
+::selection {
+  background-color: #efd8c9;
+  color: var(--ink-primary);
+}
+
+input,
+textarea,
+select {
+  caret-color: var(--accent-primary);
 }
 
 /* Display type: tighter tracking and leading as size grows */
@@ -127,15 +172,26 @@ p {
       box-shadow 150ms ease;
   }
 
-  /* Translucent chrome: content scrolls underneath */
+  /* Translucent chrome: content scrolls underneath (Apple material) */
   .material {
-    background-color: rgb(250 247 242 / 0.72);
+    position: sticky;
+    background-color: rgb(250 249 245 / 0.72);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     backdrop-filter: blur(20px) saturate(180%);
-    border-bottom: 1px solid rgb(211 200 184 / 0.45);
   }
 
-  /* Soft layered elevation for cards */
+  /* Scroll edge effect instead of a hard divider under the header.
+     Progressively enhanced: animates in over the first 240px of scroll
+     where scroll-driven animations are supported, stays clean otherwise. */
+  @supports (animation-timeline: --page) {
+    .material {
+      animation: header-edge linear both;
+      animation-timeline: --page;
+      animation-range: 0px 240px;
+    }
+  }
+
+  /* Soft layered elevation for cards (warm ink tint) */
   .card-lift {
     transition:
       box-shadow var(--dur-ui) ease,
@@ -145,9 +201,9 @@ p {
     .card-lift:hover {
       border-color: var(--border-strong);
       box-shadow:
-        0 1px 2px rgb(24 24 27 / 0.04),
-        0 4px 12px rgb(24 24 27 / 0.05),
-        0 12px 24px -8px rgb(24 24 27 / 0.06);
+        0 1px 2px rgb(31 30 27 / 0.04),
+        0 4px 12px rgb(31 30 27 / 0.05),
+        0 12px 24px -8px rgb(31 30 27 / 0.06);
     }
   }
 
@@ -196,9 +252,9 @@ p {
   .skeleton {
     background: linear-gradient(
       100deg,
-      rgb(228 221 211 / 0.5) 30%,
-      rgb(243 237 227 / 0.9) 50%,
-      rgb(228 221 211 / 0.5) 70%
+      rgb(232 228 219 / 0.5) 30%,
+      rgb(240 238 230 / 0.9) 50%,
+      rgb(232 228 219 / 0.5) 70%
     );
     background-size: 200% 100%;
     animation: shimmer 1.4s linear infinite;
@@ -213,7 +269,7 @@ p {
  */
 .field:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 30%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 26%, transparent);
   outline: 2px solid transparent;
   outline-offset: 0;
 }
@@ -249,6 +305,13 @@ p {
 @keyframes shimmer {
   to {
     background-position: -200% 0;
+  }
+}
+@keyframes header-edge {
+  to {
+    box-shadow:
+      0 1px 0 rgb(31 30 27 / 0.07),
+      0 10px 28px -18px rgb(31 30 27 / 0.22);
   }
 }
 
@@ -291,7 +354,7 @@ p {
 @media (prefers-contrast: more) {
   :root {
     --border-hairline: var(--border-strong);
-    --ink-secondary: #3f3f46;
-    --ink-muted: #52525b;
+    --ink-secondary: #3f3c35;
+    --ink-muted: #53514a;
   }
 }

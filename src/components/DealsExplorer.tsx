@@ -7,6 +7,10 @@ import type { DealSummaryDto } from "@/lib/deal-types";
 import { DEAL_CATEGORIES } from "@/lib/validation";
 import { BirthdayPlanner } from "./BirthdayPlanner";
 import { DealCard } from "./DealCard";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { PillTabs } from "@/components/ui/PillTabs";
+import { Select } from "@/components/ui/Field";
 
 interface DealsExplorerProps {
   initialDeals: DealSummaryDto[];
@@ -22,6 +26,8 @@ type QuickFilter =
   | "ktp_only"
   | "app_required"
   | "needs_check";
+
+const ACTIVE_STATUSES_EXCLUDE: string[] = ["EXPIRED"];
 
 export function DealsExplorer({
   initialDeals,
@@ -95,19 +101,41 @@ export function DealsExplorer({
   }
 
   const stats = useMemo(() => {
-    const active = deals.filter((d) => d.verificationStatus !== "EXPIRED");
+    const active = deals.filter(
+      (d) => !ACTIVE_STATUSES_EXCLUDE.includes(d.verificationStatus),
+    );
     const free100 = active.filter((d) => d.discountType === "FREE_100");
     const discount50 = active.filter(
       (d) =>
         d.discountType === "FREE_100" ||
         d.discountType === "BOGO" ||
-        (d.discountValue ?? 0) >= 50
+        (d.discountValue ?? 0) >= 50,
     );
     return {
       totalActive: active.length,
       free100Count: free100.length,
       discount50Count: discount50.length,
     };
+  }, [deals]);
+
+  const quickTabCounts = useMemo(() => {
+    const active = deals.filter((d) => d.verificationStatus !== "EXPIRED");
+    return {
+      all: active.length,
+      free_100: active.filter((d) => d.discountType === "FREE_100").length,
+      discount_50_plus: active.filter(
+        (d) =>
+          d.discountType === "FREE_100" ||
+          d.discountType === "BOGO" ||
+          (d.discountValue ?? 0) >= 50,
+      ).length,
+      no_min_spend: active.filter((d) => d.minPurchaseIdr === 0).length,
+      ktp_only: active.filter((d) => d.requiresIdCard && !d.requiresApp).length,
+      app_required: active.filter((d) => d.requiresApp).length,
+      needs_check: deals.filter(
+        (d) => d.verificationStatus === "STALE" || d.verificationStatus === "EXPIRED",
+      ).length,
+    } satisfies Record<QuickFilter, number>;
   }, [deals]);
 
   const filteredDeals = useMemo(() => {
@@ -186,62 +214,75 @@ export function DealsExplorer({
     setSortBy("freshness");
   }
 
-  const quickTabs: Array<{ key: QuickFilter; label: string }> = [
-    { key: "all", label: "Semua Aktif" },
-    { key: "free_100", label: "100% Gratis" },
-    { key: "discount_50_plus", label: "Diskon 50%+" },
-    { key: "no_min_spend", label: "Tanpa Min. Belanja" },
-    { key: "ktp_only", label: "Cukup KTP (Tanpa App)" },
-    { key: "app_required", label: "Wajib Aplikasi" },
-    { key: "needs_check", label: "Perlu Cek Ulang / Expired" },
+  const quickTabs: Array<{ value: QuickFilter; label: string }> = [
+    { value: "all", label: "Semua Aktif" },
+    { value: "free_100", label: "100% Gratis" },
+    { value: "discount_50_plus", label: "Diskon 50%+" },
+    { value: "no_min_spend", label: "Tanpa Min. Belanja" },
+    { value: "ktp_only", label: "Cukup KTP" },
+    { value: "app_required", label: "Wajib Aplikasi" },
+    { value: "needs_check", label: "Perlu Cek Ulang" },
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 space-y-6">
-      {/* Editorial Header + Real Database Telemetry */}
-      <section className="border-b border-hairline pb-6 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-        <div className="max-w-2xl">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink">
-            Direktori Promo Ulang Tahun Indonesia
-          </h1>
-          <p className="mt-2 text-sm sm:text-base text-ink-2 leading-relaxed">
-            Kumpulan promo birthday treat di Indonesia—mulai dari Boost Juice 100% gratis, Sushi Tei, Starbucks, hingga diskon restoran 50%—yang dipantau scraper web dan diverifikasi ulang oleh komunitas dengan bukti struk atau tautan resmi.
-          </p>
-        </div>
-
-        <dl className="grid grid-cols-3 gap-3 shrink-0">
-          <div className="rounded-xl border border-hairline bg-surface px-3.5 py-2.5">
-            <dt className="text-[11px] font-medium text-ink-muted">Promo Aktif</dt>
-            <dd className="mt-0.5 font-mono text-lg font-bold text-ink tabular-nums">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      {/* Editorial hero: the claim, the proof, then the tools */}
+      <section className="pt-10 sm:pt-14 pb-8 max-w-3xl">
+        <h1 className="font-serif text-display-xl text-ink">
+          Setiap ulang tahun punya bagiannya.
+        </h1>
+        <p className="mt-4 max-w-2xl text-base sm:text-lg leading-relaxed text-ink-2">
+          Direktori promo ulang tahun di Indonesia—dari Boost Juice 100% gratis
+          hingga diskon restoran 50%—dipantau scraper web dan diverifikasi
+          komunitas dengan bukti struk atau tautan resmi.
+        </p>
+        <p className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-muted">
+          <span>
+            <strong className="font-serif text-base font-medium text-ink tabular-nums">
               {stats.totalActive}
-            </dd>
-          </div>
-          <div className="rounded-xl border border-success-line bg-success-bg px-3.5 py-2.5">
-            <dt className="text-[11px] font-medium text-emerald">100% Gratis</dt>
-            <dd className="mt-0.5 font-mono text-lg font-bold text-emerald tabular-nums">
+            </strong>{" "}
+            promo aktif
+          </span>
+          <span aria-hidden="true" className="hidden sm:inline">
+            ·
+          </span>
+          <span>
+            <strong className="font-serif text-base font-medium text-emerald tabular-nums">
               {stats.free100Count}
-            </dd>
-          </div>
-          <div className="rounded-xl border border-hairline bg-surface px-3.5 py-2.5">
-            <dt className="text-[11px] font-medium text-ink-muted">Diskon 50%+</dt>
-            <dd className="mt-0.5 font-mono text-lg font-bold text-accent tabular-nums">
+            </strong>{" "}
+            gratis total
+          </span>
+          <span aria-hidden="true" className="hidden sm:inline">
+            ·
+          </span>
+          <span>
+            <strong className="font-serif text-base font-medium text-accent tabular-nums">
               {stats.discount50Count}
-            </dd>
-          </div>
-        </dl>
+            </strong>{" "}
+            diskon 50%+
+          </span>
+          {lastScrapedIso && (
+            <>
+              <span aria-hidden="true" className="hidden sm:inline">
+                ·
+              </span>
+              <span>
+                scraper terakhir{" "}
+                {new Date(lastScrapedIso).toLocaleDateString("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </span>
+            </>
+          )}
+        </p>
       </section>
 
-      {/* Birthday Prep Planner */}
-      <BirthdayPlanner
-        deals={deals}
-        nowIso={nowIso}
-        onApplyPlannerFilter={(mode) => {
-          setQuickFilter(mode === "prep_apps" ? "app_required" : "ktp_only");
-        }}
-      />
-
       {/* Search, Filters & Sort Controls */}
-      <section aria-label="Filter dan Pencarian Promo" className="space-y-3">
+      <section
+        aria-label="Filter dan Pencarian Promo"
+        className="sticky top-16 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-canvas/90 border-y border-hairline space-y-3"
+      >
         <div className="flex flex-col md:flex-row gap-2.5">
           <div className="relative flex-1">
             <Search
@@ -252,9 +293,9 @@ export function DealsExplorer({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari brand atau promo (mis. Boost, Sushi Tei, Starbucks, 50%, Boga)..."
+              placeholder="Cari brand atau promo — Boost, Sushi Tei, Starbucks…"
               aria-label="Cari brand atau promo"
-              className="w-full field rounded-lg border border-line-strong bg-surface pl-9 pr-9 py-2 text-sm text-ink placeholder:text-ink-muted"
+              className="field w-full rounded-lg border border-line-strong bg-surface pl-9 pr-9 py-2 text-sm text-ink placeholder:text-ink-muted"
             />
             {query && (
               <button
@@ -269,11 +310,11 @@ export function DealsExplorer({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <select
+            <Select
               aria-label="Kategori promo"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="field rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm font-medium text-ink"
+              className="w-auto min-w-0 flex-1 sm:flex-none font-medium"
             >
               <option value="ALL">Semua Kategori</option>
               {DEAL_CATEGORIES.map((cat) => (
@@ -281,150 +322,137 @@ export function DealsExplorer({
                   {cat}
                 </option>
               ))}
-            </select>
+            </Select>
 
-            <select
+            <Select
               aria-label="Urutkan promo"
               value={sortBy}
               onChange={(e) =>
                 setSortBy(e.target.value as "freshness" | "discount" | "votes" | "newest")
               }
-              className="field rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm font-medium text-ink"
+              className="w-auto min-w-0 flex-1 sm:flex-none font-medium"
             >
-              <option value="freshness">Terbaru &amp; Freshness Tertinggi</option>
-              <option value="discount">Diskon Terbesar (100% dulu)</option>
-              <option value="votes">Konfirmasi Komunitas Terbanyak</option>
+              <option value="freshness">Terbaru</option>
+              <option value="discount">Diskon Terbesar</option>
+              <option value="votes">Konfirmasi Terbanyak</option>
               <option value="newest">Baru Ditambahkan</option>
-            </select>
+            </Select>
 
-            <button
-              type="button"
+            <Button
+              variant="outline"
               onClick={refreshFromApi}
               disabled={isRefreshing}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-subtle disabled:opacity-60 pressable focus-ring"
+              className="shrink-0"
             >
               <RefreshCw
                 className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
                 aria-hidden="true"
               />
-              Segarkan
-            </button>
+              <span className="hidden sm:inline">Segarkan</span>
+            </Button>
           </div>
         </div>
 
-        {/* Quick Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter cepat">
-          {quickTabs.map((tab) => {
-            const active = quickFilter === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setQuickFilter(tab.key)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold pressable focus-ring ${
-                  active
-                    ? "border-ink bg-ink text-white"
-                    : "border-hairline bg-surface text-ink-2 hover:border-line-strong hover:text-ink"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <PillTabs
+          aria-label="Filter cepat"
+          options={quickTabs.map((tab) => ({
+            ...tab,
+            count: quickTabCounts[tab.value],
+          }))}
+          value={quickFilter}
+          onChange={setQuickFilter}
+        />
       </section>
 
       {/* Error State */}
       {fetchError && (
         <div
           role="alert"
-          className="reveal rounded-xl border border-danger-line bg-danger-bg p-4 flex items-center justify-between gap-4 text-sm text-accent"
+          className="reveal mt-4 rounded-xl border border-danger-line bg-danger-bg p-4 flex items-center justify-between gap-4 text-sm text-danger-ink"
         >
           <span>{fetchError}</span>
           <button
             type="button"
             onClick={refreshFromApi}
-            className="rounded-lg border border-accent px-3 py-1 text-xs font-semibold hover:bg-accent hover:text-white pressable focus-ring"
+            className="rounded-lg border border-danger-line px-3 py-1 text-xs font-semibold text-danger-ink hover:bg-danger-ink hover:text-white hover:border-danger-ink pressable focus-ring"
           >
             Coba Lagi
           </button>
         </div>
       )}
 
-      {/* Result Count + Last Scrape Metadata */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
+      {/* Result Count */}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
         <span>
-          Menampilkan <strong className="text-ink tabular-nums">{filteredDeals.length}</strong>{" "}
+          Menampilkan{" "}
+          <strong className="text-ink tabular-nums">{filteredDeals.length}</strong>{" "}
           promo
-          {lastScrapedIso
-            ? ` · Scraper terakhir jalan ${new Date(lastScrapedIso).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}`
-            : ""}
         </span>
-        <Link href="/submit" className="font-semibold text-accent hover:underline rounded-md pressable focus-ring">
+        <Link
+          href="/submit"
+          className="font-semibold text-accent hover:text-accent-hover underline-offset-4 hover:underline rounded-md pressable focus-ring"
+        >
           Punya temuan promo lain? Kirim dengan bukti
         </Link>
       </div>
 
-      {/* Loading Skeleton State during manual API refresh */}
-      {isRefreshing ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <div
-              key={idx}
-              className="h-64 rounded-xl border border-hairline bg-surface p-4 space-y-3"
-            >
-              <div className="flex justify-between">
-                <div className="h-5 w-24 rounded-md skeleton" />
-                <div className="h-5 w-20 rounded-md skeleton" />
+      {/* Grid / Skeleton / Empty */}
+      <div className="mt-3">
+        {isRefreshing ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="h-[22rem] rounded-2xl border border-hairline bg-surface p-5 space-y-3"
+              >
+                <div className="flex justify-between">
+                  <div className="h-4 w-28 rounded-md skeleton" />
+                  <div className="h-4 w-20 rounded-md skeleton" />
+                </div>
+                <div className="h-10 w-24 rounded-md skeleton" />
+                <div className="h-4 w-4/5 rounded-md skeleton" />
+                <div className="h-4 w-3/5 rounded-md skeleton" />
+                <div className="h-12 w-full rounded-md skeleton" />
               </div>
-              <div className="h-4 w-32 rounded-md skeleton" />
-              <div className="h-5 w-4/5 rounded-md skeleton" />
-              <div className="h-16 w-full rounded-md skeleton" />
-            </div>
-          ))}
-        </div>
-      ) : filteredDeals.length === 0 ? (
-        /* Empty State */
-        <div className="rounded-xl border border-hairline bg-surface p-10 text-center">
-          <p className="text-base font-bold text-ink">
-            Tidak ada promo yang cocok dengan filter ini.
-          </p>
-          <p className="mt-1 text-sm text-ink-2">
-            Coba ubah kata kunci pencarian atau reset filter untuk melihat semua promo ulang tahun Indonesia.
-          </p>
-          <div className="mt-4 flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={resetAllFilters}
-              className="rounded-lg border border-line-strong bg-canvas px-4 py-2 text-sm font-semibold text-ink hover:bg-subtle pressable focus-ring"
-            >
-              Reset Semua Filter
-            </button>
-            <Link
-              href="/submit"
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-hover pressable focus-ring"
-            >
-              Kirim Temuan Baru
-            </Link>
+            ))}
           </div>
-        </div>
-      ) : (
-        /* Populated Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredDeals.map((deal, index) => (
-            <DealCard
-              key={deal.id}
-              deal={deal}
-              nowIso={nowIso}
-              revealIndex={hasAnimated ? undefined : index}
-            />
-          ))}
-        </div>
-      )}
+        ) : filteredDeals.length === 0 ? (
+          <EmptyState
+            title="Tidak ada promo yang cocok"
+            description="Coba ubah kata kunci pencarian atau reset filter untuk melihat semua promo ulang tahun Indonesia."
+            action={
+              <div className="flex items-center justify-center gap-3">
+                <Button variant="outline" onClick={resetAllFilters}>
+                  Reset Semua Filter
+                </Button>
+                <Link href="/submit" className="inline-flex">
+                  <Button variant="secondary">Kirim Temuan Baru</Button>
+                </Link>
+              </div>
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredDeals.map((deal, index) => (
+              <DealCard
+                key={deal.id}
+                deal={deal}
+                nowIso={nowIso}
+                revealIndex={hasAnimated ? undefined : index}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Birthday planner: the quiet close that turns finds into a plan */}
+      <BirthdayPlanner
+        deals={deals}
+        nowIso={nowIso}
+        onApplyPlannerFilter={(mode) => {
+          setQuickFilter(mode === "prep_apps" ? "app_required" : "ktp_only");
+        }}
+      />
     </div>
   );
 }

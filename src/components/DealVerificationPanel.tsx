@@ -11,10 +11,14 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import {
   getVerificationMeta,
   type DealDetailDto,
 } from "@/lib/deal-types";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { FieldLabel, Input, Textarea } from "@/components/ui/Field";
 import { formatRelativeDays } from "@/lib/validation";
 
 interface DealVerificationPanelProps {
@@ -41,12 +45,16 @@ export function DealVerificationPanel({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ src: string; cx: number; cy: number } | null>(null);
   const [lightboxClosing, setLightboxClosing] = useState(false);
+  /** null = open; "shrink" exits toward the thumbnail; "drop" exits downward after a flick. */
+  const [lightboxExit, setLightboxExit] = useState<"shrink" | "drop" | null>(null);
+  const [lightboxDropY, setLightboxDropY] = useState(0);
   const lightboxTriggerRef = useRef<HTMLElement | null>(null);
   const lightboxCloseBtnRef = useRef<HTMLButtonElement | null>(null);
   const lightboxPanelRef = useRef<HTMLDivElement | null>(null);
   const lightboxClosingRef = useRef(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [adminToken, setAdminToken] = useState("");
+  const reduceMotion = useReducedMotion();
 
   const now = new Date(nowIso);
   const statusMeta = getVerificationMeta(deal.verificationStatus);
@@ -60,6 +68,7 @@ export function DealVerificationPanel({
     lightboxTriggerRef.current = trigger;
     lightboxClosingRef.current = false;
     setLightboxClosing(false);
+    setLightboxExit(null);
     setLightbox({
       src,
       cx: rect.left + rect.width / 2,
@@ -67,17 +76,19 @@ export function DealVerificationPanel({
     });
   }
 
-  function closeLightbox() {
+  function closeLightbox(exit: "shrink" | "drop" = "shrink") {
     if (lightboxClosingRef.current) return;
     lightboxClosingRef.current = true;
     setLightboxClosing(true);
+    setLightboxExit(exit);
     closeTimerRef.current = setTimeout(() => {
       closeTimerRef.current = null;
       lightboxClosingRef.current = false;
       setLightbox(null);
       setLightboxClosing(false);
+      setLightboxExit(null);
       lightboxTriggerRef.current?.focus();
-    }, 140);
+    }, 180);
   }
 
   useEffect(() => {
@@ -217,44 +228,47 @@ export function DealVerificationPanel({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Verification & Freshness Action Box */}
-      <section className="rounded-xl border border-hairline bg-surface p-5 space-y-5">
+      <section className="rounded-2xl border border-hairline bg-surface p-5 sm:p-6 space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-4">
           <div>
-            <h2 className="text-base font-bold text-ink">
-              Verifikasi Status &amp; Kirim Bukti Terbaru
+            <h2 className="font-serif text-display-md text-ink">
+              Bantu verifikasi promo ini
             </h2>
-            <p className="text-xs text-ink-2 mt-0.5">
-              Baru saja klaim promo ini atau menemukan syaratnya berubah? Perbarui status agar pencari promo lain dapat info akurat.
+            <p className="mt-1 text-sm text-ink-2">
+              Baru klaim atau menemukan syaratnya berubah? Perbarui status agar
+              pencari promo lain dapat info akurat.
             </p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-4 shrink-0">
             <div className="text-right">
-              <div className="text-[11px] text-ink-muted">Skor Kesegaran</div>
-              <div className="font-mono text-base font-bold text-ink tabular-nums">
+              <div className="text-micro font-medium uppercase text-ink-muted">
+                Skor kesegaran
+              </div>
+              <div className="font-mono text-lg font-bold text-ink tabular-nums">
                 {deal.freshnessScore}/100
               </div>
             </div>
-            <span
-              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${statusMeta.className}`}
-            >
-              {statusMeta.label}
-            </span>
+            <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
           </div>
         </div>
 
         {/* Current Vote Tally */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-success-line bg-success-bg p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald">Masih Berlaku</span>
-            <span className="font-mono text-lg font-bold text-emerald tabular-nums">
+          <div className="rounded-xl bg-success-bg p-3.5 flex items-center justify-between">
+            <span className="text-xs font-semibold text-emerald">
+              Masih Berlaku
+            </span>
+            <span className="font-serif text-xl font-medium text-emerald tabular-nums">
               {deal.stillWorksCount}
             </span>
           </div>
-          <div className="rounded-lg border border-danger-line bg-danger-bg p-3 flex items-center justify-between">
-            <span className="text-xs font-semibold text-accent">Lapor Berubah / Expired</span>
-            <span className="font-mono text-lg font-bold text-accent tabular-nums">
+          <div className="rounded-xl bg-danger-bg p-3.5 flex items-center justify-between">
+            <span className="text-xs font-semibold text-danger-ink">
+              Lapor Berubah / Expired
+            </span>
+            <span className="font-serif text-xl font-medium text-danger-ink tabular-nums">
               {deal.expiredReportCount}
             </span>
           </div>
@@ -268,11 +282,11 @@ export function DealVerificationPanel({
               className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-semibold pressable focus-ring ${
                 voteType === "STILL_WORKS"
                   ? "border-emerald bg-emerald text-white"
-                  : "border-line-strong bg-canvas text-ink hover:bg-subtle"
+                  : "border-line-strong bg-surface text-ink hover:bg-subtle/70"
               }`}
             >
               <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-              Masih Berlaku (Saya Baru Klaim)
+              Masih Berlaku
             </button>
 
             <button
@@ -280,59 +294,50 @@ export function DealVerificationPanel({
               onClick={() => setVoteType("EXPIRED_OR_CHANGED")}
               className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-semibold pressable focus-ring ${
                 voteType === "EXPIRED_OR_CHANGED"
-                  ? "border-accent bg-accent text-white"
-                  : "border-line-strong bg-canvas text-ink hover:bg-subtle"
+                  ? "border-danger-ink bg-danger-ink text-white"
+                  : "border-line-strong bg-surface text-ink hover:bg-subtle/70"
               }`}
             >
               <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-              Sudah Berakhir / Syarat Berubah
+              Sudah Berakhir / Berubah
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label
-                htmlFor="verify-name"
-                className="block text-xs font-semibold text-ink mb-1"
-              >
-                Nama / Inisial (Opsional)
-              </label>
-              <input
+              <FieldLabel htmlFor="verify-name">
+                Nama / Inisial (opsional)
+              </FieldLabel>
+              <Input
                 id="verify-name"
                 type="text"
                 value={submitterName}
                 onChange={(e) => setSubmitterName(e.target.value)}
                 placeholder="Mis. Budi S."
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="mt-1.5"
               />
             </div>
 
             <div>
-              <label
-                htmlFor="verify-outlet"
-                className="block text-xs font-semibold text-ink mb-1"
-              >
-                Cabang / Kota Klaim (Opsional)
-              </label>
-              <input
+              <FieldLabel htmlFor="verify-outlet">
+                Cabang / Kota Klaim (opsional)
+              </FieldLabel>
+              <Input
                 id="verify-outlet"
                 type="text"
                 value={outletLocation}
                 onChange={(e) => setOutletLocation(e.target.value)}
                 placeholder="Mis. Grand Indonesia, Jakarta"
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="mt-1.5"
               />
             </div>
           </div>
 
           <div>
-            <label
-              htmlFor="verify-comment"
-              className="block text-xs font-semibold text-ink mb-1"
-            >
-              Catatan Lapangan (Opsional)
-            </label>
-            <textarea
+            <FieldLabel htmlFor="verify-comment">
+              Catatan Lapangan (opsional)
+            </FieldLabel>
+            <Textarea
               id="verify-comment"
               rows={2}
               value={comment}
@@ -342,34 +347,31 @@ export function DealVerificationPanel({
                   ? "Mis. Berhasil klaim gratis hari ini tanpa min. order, cukup scan barcode app + KTP."
                   : "Mis. Kasir menginfokan mulai bulan ini wajib minimal belanja Rp100.000."
               }
-              className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+              className="mt-1.5"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label
-                htmlFor="verify-proof-link"
-                className="block text-xs font-semibold text-ink mb-1"
-              >
-                Tautan Bukti IG/TikTok/Web (Opsional)
-              </label>
-              <input
+              <FieldLabel htmlFor="verify-proof-link">
+                Tautan Bukti IG/TikTok/Web (opsional)
+              </FieldLabel>
+              <Input
                 id="verify-proof-link"
                 type="url"
                 value={proofLinkUrl}
                 onChange={(e) => setProofLinkUrl(e.target.value)}
                 placeholder="https://..."
-                className="field w-full rounded-lg border border-line-strong bg-canvas px-3 py-2 text-sm"
+                className="mt-1.5"
               />
             </div>
 
             <div>
-              <span className="block text-xs font-semibold text-ink mb-1">
-                Unggah Foto Struk / Voucher App (Opsional)
+              <span className="flex items-baseline gap-1 text-xs font-semibold text-ink">
+                Unggah Foto Struk / Voucher (opsional)
               </span>
-              <div className="flex items-center gap-2">
-                <label className="pressable inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line-strong bg-canvas px-3 py-2 text-xs font-semibold text-ink hover:bg-subtle has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent">
+              <div className="mt-1.5 flex items-center gap-2">
+                <label className="pressable inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-3 py-2 text-xs font-semibold text-ink hover:bg-subtle/70 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent">
                   <Upload className="h-3.5 w-3.5" aria-hidden="true" />
                   {uploading ? "Mengunggah..." : "Pilih Gambar"}
                   <input
@@ -398,7 +400,7 @@ export function DealVerificationPanel({
           </div>
 
           {error && (
-            <p role="alert" className="reveal text-xs font-medium text-accent">
+            <p role="alert" className="reveal text-xs font-medium text-danger-ink">
               {error}
             </p>
           )}
@@ -408,21 +410,17 @@ export function DealVerificationPanel({
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={submitting || uploading}
-            className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink/85 disabled:opacity-60 pressable focus-ring"
-          >
+          <Button type="submit" disabled={submitting || uploading}>
             {submitting ? "Menyimpan..." : "Kirim Laporan Verifikasi"}
-          </button>
+          </Button>
         </form>
       </section>
 
       {/* Proof Gallery */}
-      <section className="rounded-xl border border-hairline bg-surface p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-ink">
-            Galeri Bukti &amp; Sumber ({deal.proofs.length})
+      <section className="rounded-2xl border border-hairline bg-surface p-5 sm:p-6 space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-serif text-display-md text-ink">
+            Galeri Bukti ({deal.proofs.length})
           </h2>
           <span className="text-xs text-ink-muted">
             Diurutkan dari bukti terbaru
@@ -431,14 +429,15 @@ export function DealVerificationPanel({
 
         {deal.proofs.length === 0 ? (
           <p className="text-sm text-ink-2">
-            Belum ada lampiran bukti tambahan. Jadilah kontributor pertama yang mengirim foto struk atau tautan resmi di atas.
+            Belum ada lampiran bukti tambahan. Jadilah kontributor pertama yang
+            mengirim foto struk atau tautan resmi di atas.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {deal.proofs.map((proof) => (
               <div
                 key={proof.id}
-                className="rounded-lg border border-hairline bg-canvas p-3 flex flex-col justify-between gap-2.5"
+                className="rounded-xl bg-canvas p-3 flex flex-col justify-between gap-2.5"
               >
                 {proof.proofImageUrl && (
                   <button
@@ -477,7 +476,7 @@ export function DealVerificationPanel({
                     href={proof.proofLinkUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline truncate"
+                    className="inline-flex items-center gap-1 rounded-md text-xs font-semibold text-accent hover:text-accent-hover underline-offset-4 hover:underline truncate pressable focus-ring"
                   >
                     <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     <span className="truncate">{proof.proofLinkUrl}</span>
@@ -490,9 +489,9 @@ export function DealVerificationPanel({
       </section>
 
       {/* Recent Verification Timeline */}
-      <section className="rounded-xl border border-hairline bg-surface p-5 space-y-3">
-        <h2 className="text-base font-bold text-ink">
-          Riwayat Pengecekan Komunitas ({deal.verifications.length})
+      <section className="rounded-2xl border border-hairline bg-surface p-5 sm:p-6 space-y-3">
+        <h2 className="font-serif text-display-md text-ink">
+          Riwayat Pengecekan ({deal.verifications.length})
         </h2>
         {deal.verifications.length === 0 ? (
           <p className="text-xs text-ink-muted">Belum ada riwayat voting komunitas.</p>
@@ -503,7 +502,7 @@ export function DealVerificationPanel({
                 <div>
                   <span
                     className={`inline-block font-semibold ${
-                      v.voteType === "STILL_WORKS" ? "text-emerald" : "text-accent"
+                      v.voteType === "STILL_WORKS" ? "text-emerald" : "text-danger-ink"
                     }`}
                   >
                     {v.voteType === "STILL_WORKS"
@@ -525,9 +524,9 @@ export function DealVerificationPanel({
       </section>
 
       {/* Admin Moderation Controls */}
-      <section className="rounded-xl border border-hairline bg-subtle/60 p-4 space-y-3">
+      <section className="rounded-2xl bg-subtle/60 p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-ink">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-ink">
             <ShieldCheck className="h-4 w-4 text-emerald" aria-hidden="true" />
             Moderasi Status Admin
           </div>
@@ -545,7 +544,7 @@ export function DealVerificationPanel({
             type="button"
             disabled={moderating}
             onClick={() => handleModerate("ADMIN_VERIFIED")}
-            className="rounded-lg border border-emerald bg-success-bg px-3 py-1.5 text-xs font-semibold text-emerald hover:bg-emerald hover:text-white pressable focus-ring"
+            className="rounded-lg border border-emerald bg-success-bg px-3 py-1.5 text-xs font-semibold text-emerald hover:bg-emerald hover:text-white hover:border-emerald pressable focus-ring"
           >
             Tandai Admin Verified
           </button>
@@ -553,7 +552,7 @@ export function DealVerificationPanel({
             type="button"
             disabled={moderating}
             onClick={() => handleModerate("STALE")}
-            className="rounded-lg border border-amber bg-amber/10 px-3 py-1.5 text-xs font-semibold text-amber hover:bg-amber hover:text-white pressable focus-ring"
+            className="rounded-lg border border-amber bg-warn-bg px-3 py-1.5 text-xs font-semibold text-amber hover:bg-amber hover:text-white hover:border-amber pressable focus-ring"
           >
             Tandai Perlu Cek Ulang
           </button>
@@ -561,44 +560,72 @@ export function DealVerificationPanel({
             type="button"
             disabled={moderating}
             onClick={() => handleModerate("EXPIRED")}
-            className="rounded-lg border border-accent bg-danger-bg px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent hover:text-white pressable focus-ring"
+            className="rounded-lg border border-danger-ink bg-danger-bg px-3 py-1.5 text-xs font-semibold text-danger-ink hover:bg-danger-ink hover:text-white hover:border-danger-ink pressable focus-ring"
           >
             Tandai Expired
           </button>
         </div>
       </section>
 
-      {/* Lightbox Modal for Proof Image */}
+      {/* Lightbox: pops from its thumbnail; flick down to dismiss (velocity-aware) */}
       {lightbox && (
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Pratinjau bukti promo"
           data-closing={lightboxClosing ? "true" : undefined}
-          className="lightbox-scrim fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
-          onClick={closeLightbox}
+          className="lightbox-scrim fixed inset-0 z-50 flex items-center justify-center bg-[#1f1e1b]/78 p-4"
+          onClick={() => closeLightbox()}
         >
-          <div
+          <motion.div
             ref={lightboxPanelRef}
-            className="lightbox-panel relative max-w-3xl w-full bg-surface rounded-xl p-2"
+            className="relative max-w-3xl w-full cursor-grab active:cursor-grabbing touch-none"
             onClick={(e) => e.stopPropagation()}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+            animate={
+              lightboxExit === "drop"
+                ? { y: lightboxDropY, opacity: 0, scale: 0.96 }
+                : lightboxExit === "shrink"
+                  ? { y: 0, opacity: 0, scale: 0.96 }
+                  : { y: 0, opacity: 1, scale: 1 }
+            }
+            transition={
+              lightboxExit !== null
+                ? { duration: 0.17, ease: "easeIn" }
+                : reduceMotion
+                  ? { duration: 0.15 }
+                  : { type: "spring", bounce: 0, duration: 0.35 }
+            }
+            drag={reduceMotion || lightboxExit !== null ? false : "y"}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.15, bottom: 0.55 }}
+            onDragEnd={(_, info) => {
+              // Momentum projection: a flick or a deep drag dismisses downward.
+              if (info.offset.y > 110 || info.velocity.y > 550) {
+                setLightboxDropY(Math.max(320, info.offset.y + info.velocity.y / 8));
+                closeLightbox("drop");
+              }
+            }}
           >
-            <button
-              ref={lightboxCloseBtnRef}
-              type="button"
-              onClick={closeLightbox}
-              aria-label="Tutup pratinjau gambar"
-              className="pressable focus-ring absolute right-3 top-3 rounded-full bg-surface/90 p-1.5 text-ink border border-hairline"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={lightbox.src}
-              alt="Pratinjau bukti promo"
-              className="max-h-[80vh] w-full object-contain rounded-lg"
-            />
-          </div>
+            <div className="rounded-2xl bg-surface p-2 shadow-[0_24px_80px_-16px_rgb(0_0_0/0.5)]">
+              <button
+                ref={lightboxCloseBtnRef}
+                type="button"
+                onClick={() => closeLightbox()}
+                aria-label="Tutup pratinjau gambar"
+                className="pressable focus-ring absolute right-3 top-3 z-10 rounded-full bg-surface/90 p-1.5 text-ink border border-hairline"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightbox.src}
+                alt="Pratinjau bukti promo"
+                draggable={false}
+                className="max-h-[80vh] w-full rounded-xl object-contain select-none"
+              />
+            </div>
+          </motion.div>
         </div>
       )}
     </div>
