@@ -24,7 +24,7 @@ export function buttonClasses(
   size: ButtonSize = "md",
   extra = "",
 ) {
-  return `inline-flex items-center justify-center font-semibold pressable focus-ring disabled:pointer-events-none disabled:opacity-50 select-none ${variantClasses[variant]} ${sizeClasses[size]} ${extra}`;
+  return `inline-flex items-center justify-center font-semibold whitespace-nowrap pressable focus-ring disabled:pointer-events-none disabled:opacity-50 select-none ${variantClasses[variant]} ${sizeClasses[size]} ${extra}`;
 }
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

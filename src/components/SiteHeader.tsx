@@ -48,7 +48,10 @@ export function SiteHeader() {
           <Link href="/" className={navLinkClass(pathname === "/")}>
             Direktori
           </Link>
-          <Link href="/scraper" className={navLinkClass(pathname === "/scraper")}>
+          <Link
+            href="/scraper"
+            className={`${navLinkClass(pathname === "/scraper")} hidden sm:inline-block`}
+          >
             Scraper
           </Link>
           <Link

@@ -309,12 +309,12 @@ export function DealsExplorer({
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
             <Select
               aria-label="Kategori promo"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-auto min-w-0 flex-1 sm:flex-none font-medium"
+              className="w-full sm:w-auto font-medium"
             >
               <option value="ALL">Semua Kategori</option>
               {DEAL_CATEGORIES.map((cat) => (
@@ -330,7 +330,7 @@ export function DealsExplorer({
               onChange={(e) =>
                 setSortBy(e.target.value as "freshness" | "discount" | "votes" | "newest")
               }
-              className="w-auto min-w-0 flex-1 sm:flex-none font-medium"
+              className="w-full sm:w-auto font-medium"
             >
               <option value="freshness">Terbaru</option>
               <option value="discount">Diskon Terbesar</option>
