@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Play, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import type { ScrapeRunDto } from "@/lib/deal-types";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatTile } from "@/components/ui/StatTile";
+import { Switch } from "@/components/ui/Switch";
+import { cn } from "@/lib/utils";
 
 interface ScraperDashboardProps {
   initialRuns: ScrapeRunDto[];
@@ -33,7 +36,7 @@ const ADAPTER_OPTIONS = [
   {
     key: "search-discovery",
     label: "Web Search Discovery",
-    detail: "Pencarian artikel roundup promo ulang tahun Indonesia 2026 terbaru",
+    detail: "Pencarian artikel roundup promo ulang tahun Indonesia terbaru",
   },
 ];
 
@@ -64,7 +67,7 @@ export function ScraperDashboard({
 
   function toggleSource(key: string) {
     setSelectedSources((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
     );
   }
 
@@ -91,16 +94,17 @@ export function ScraperDashboard({
       const notes: string[] = [];
       for (const r of json.result?.runs ?? []) {
         notes.push(
-          `${r.sourceName}: [${r.status}] ditemukan ${r.dealsFound}, baru ${r.dealsCreated}, diperbarui ${r.dealsUpdated}`
+          `${r.sourceName}: [${r.status}] ditemukan ${r.dealsFound}, baru ${r.dealsCreated}, diperbarui ${r.dealsUpdated}`,
         );
       }
       if (json.result?.freshness) {
         const f = json.result.freshness;
         notes.push(
-          `Freshness Check: ${f.checkedCount} dicek, ${f.liveCount} link aktif, ${f.staleMarked} perlu cek ulang, ${f.expiredMarked} expired, ${f.botProtectedCount ?? 0} dilindungi anti-bot.`
+          `Freshness Check: ${f.checkedCount} dicek, ${f.liveCount} link aktif, ${f.staleMarked} perlu cek ulang, ${f.expiredMarked} expired, ${f.botProtectedCount ?? 0} dilindungi anti-bot.`,
         );
       }
       setLastOutputNotes(notes);
+      toast.success("Eksekusi scraper selesai.");
 
       const runsRes = await fetch("/api/scraper/runs");
       if (runsRes.ok) {
@@ -110,7 +114,9 @@ export function ScraperDashboard({
       }
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat scraping.");
+      const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat scraping.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsRunning(false);
     }
@@ -118,27 +124,27 @@ export function ScraperDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Summary telemetry */}
-      <dl className="grid grid-cols-2 sm:grid-cols-4 rounded-2xl border border-hairline bg-surface sm:divide-x divide-y sm:divide-y-0 divide-hairline overflow-hidden">
-        <div className="p-4 sm:p-5">
+      {/* Summary Bento Tiles */}
+      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="rounded-2xl border border-hairline bg-surface p-4 sm:p-5">
           <StatTile label="Total Promo Terdata" value={summary.totalDeals} />
         </div>
-        <div className="p-4 sm:p-5">
+        <div className="rounded-2xl border border-success-line bg-success-bg/50 p-4 sm:p-5">
           <StatTile label="Promo Aktif" value={summary.activeDeals} tone="success" />
         </div>
-        <div className="p-4 sm:p-5">
+        <div className="rounded-2xl border border-warn-line bg-warn-bg/50 p-4 sm:p-5">
           <StatTile label="Perlu Cek Ulang" value={summary.staleDeals} tone="warn" />
         </div>
-        <div className="p-4 sm:p-5">
+        <div className="rounded-2xl border border-danger-line bg-danger-bg/50 p-4 sm:p-5">
           <StatTile label="Berakhir" value={summary.expiredDeals} tone="danger" />
         </div>
       </dl>
 
       {/* Control Panel */}
-      <section className="rounded-2xl border border-hairline bg-surface p-5 sm:p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      <section className="rounded-3xl border border-hairline bg-surface p-5 sm:p-6 space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div>
-            <h2 className="font-serif text-xl tracking-tight text-ink">
+            <h2 className="font-display text-xl font-bold tracking-tight text-ink">
               Konfigurasi Sumber Scraper
             </h2>
             <p className="mt-1 text-sm text-ink-2">
@@ -153,7 +159,7 @@ export function ScraperDashboard({
               onChange={(e) => setAdminToken(e.target.value)}
               placeholder="Token admin"
               aria-label="Token admin"
-              className="field rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-xs"
+              className="field rounded-xl border border-line-strong bg-surface px-3 py-2 text-xs"
             />
             <Button
               variant="outline"
@@ -162,13 +168,14 @@ export function ScraperDashboard({
               onClick={() => handleRunScraper(true)}
             >
               <RefreshCw
-                className={`h-3.5 w-3.5 ${isRunning ? "animate-spin" : ""}`}
+                className={cn("h-3.5 w-3.5", isRunning && "animate-spin")}
                 aria-hidden="true"
               />
               Cek Freshness Saja
             </Button>
 
             <Button
+              size="sm"
               disabled={isRunning || (selectedSources.length === 0 && !runFreshness)}
               onClick={() => handleRunScraper(false)}
             >
@@ -182,40 +189,41 @@ export function ScraperDashboard({
           {ADAPTER_OPTIONS.map((opt) => {
             const checked = selectedSources.includes(opt.key);
             return (
-              <label
+              <div
                 key={opt.key}
-                className={`cursor-pointer rounded-xl border p-3.5 flex items-start gap-2.5 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${
+                className={cn(
+                  "rounded-2xl border p-4 flex items-start justify-between gap-3 transition-colors",
                   checked
-                    ? "border-accent/50 bg-accent-soft/40"
-                    : "border-hairline bg-canvas hover:border-line-strong"
-                }`}
+                    ? "border-accent/45 bg-accent-soft/35"
+                    : "border-hairline bg-canvas",
+                )}
               >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleSource(opt.key)}
-                  className="mt-0.5 h-4 w-4 accent-accent"
-                />
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs font-bold text-ink">{opt.label}</div>
                   <div className="text-[11px] text-ink-2 mt-1 leading-relaxed">
                     {opt.detail}
                   </div>
                 </div>
-              </label>
+                <Switch
+                  aria-label={opt.label}
+                  checked={checked}
+                  onCheckedChange={() => toggleSource(opt.key)}
+                />
+              </div>
             );
           })}
         </div>
 
-        <label className="inline-flex items-center gap-2 text-xs font-medium text-ink cursor-pointer">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-3 rounded-2xl border border-hairline bg-canvas px-4 py-3">
+          <Switch
+            aria-label="Sertakan Freshness & HTTP Link Health Check setelah scraping"
             checked={runFreshness}
-            onChange={(e) => setRunFreshness(e.target.checked)}
-            className="h-4 w-4 accent-accent"
+            onCheckedChange={setRunFreshness}
           />
-          Sertakan Freshness &amp; HTTP Link Health Check setelah scraping
-        </label>
+          <span className="text-xs font-semibold text-ink">
+            Sertakan Freshness &amp; HTTP Link Health Check setelah scraping
+          </span>
+        </div>
 
         {error && (
           <p role="alert" className="reveal text-xs font-semibold text-danger-ink">
@@ -224,7 +232,7 @@ export function ScraperDashboard({
         )}
 
         {lastOutputNotes.length > 0 && (
-          <div className="reveal rounded-xl bg-success-bg p-3.5 space-y-1 text-xs text-emerald">
+          <div className="reveal rounded-2xl border border-success-line bg-success-bg p-3.5 space-y-1 text-xs text-emerald">
             <p className="font-bold">Hasil Eksekusi Terbaru:</p>
             <ul className="list-disc pl-4 space-y-0.5">
               {lastOutputNotes.map((line, i) => (
@@ -236,12 +244,14 @@ export function ScraperDashboard({
       </section>
 
       {/* Run History Table */}
-      <section className="rounded-2xl border border-hairline bg-surface overflow-hidden">
+      <section className="rounded-3xl border border-hairline bg-surface overflow-hidden">
         <div className="px-5 py-4 border-b border-hairline flex items-center justify-between gap-2">
-          <h2 className="font-serif text-xl tracking-tight text-ink">
+          <h2 className="font-display text-lg font-bold tracking-tight text-ink">
             Riwayat Eksekusi ({runs.length})
           </h2>
-          <span className="text-xs text-ink-muted font-mono">npm run scrape</span>
+          <span className="rounded-lg bg-canvas px-2 py-1 text-[11px] text-ink-muted font-mono border border-hairline">
+            npm run scrape
+          </span>
         </div>
 
         {runs.length === 0 ? (

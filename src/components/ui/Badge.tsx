@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export type BadgeTone =
   | "clay"
@@ -9,7 +10,7 @@ export type BadgeTone =
   | "warn";
 
 const toneClasses: Record<BadgeTone, string> = {
-  clay: "bg-accent-soft text-accent-hover border-transparent",
+  clay: "bg-accent-soft text-accent-hover border-accent/20",
   emerald: "bg-success-bg text-emerald border-success-line",
   neutral: "bg-subtle text-ink-2 border-hairline",
   danger: "bg-danger-bg text-danger-ink border-danger-line",
@@ -33,9 +34,12 @@ export function Badge({
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold tracking-tight ${
-        numeric ? "font-mono tabular-nums uppercase" : ""
-      } ${toneClasses[tone]} ${className}`}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-tight",
+        numeric && "font-mono tabular-nums uppercase",
+        toneClasses[tone],
+        className,
+      )}
     >
       {children}
     </span>
@@ -55,7 +59,7 @@ export function StatusDot({ tone = "neutral" }: { tone?: BadgeTone }) {
   return (
     <span
       aria-hidden="true"
-      className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColors[tone]}`}
+      className={cn("inline-block h-1.5 w-1.5 shrink-0 rounded-full", dotColors[tone])}
     />
   );
 }

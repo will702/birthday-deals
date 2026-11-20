@@ -2,10 +2,19 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, ChevronDown } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { ArrowRight, CalendarDays, IdCard, ListChecks, Smartphone } from "lucide-react";
 import type { DealSummaryDto } from "@/lib/deal-types";
-import { Select } from "@/components/ui/Field";
+import { Button } from "@/components/ui/Button";
+import {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogHeader,
+  DialogPopup,
+  DialogTitle,
+} from "@/components/ui/Dialog";
+import { SelectMenu } from "@/components/ui/SelectMenu";
+import { cn } from "@/lib/utils";
 
 const MONTHS = [
   "Januari",
@@ -22,6 +31,16 @@ const MONTHS = [
   "Desember",
 ];
 
+const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => ({
+  value: String(i + 1),
+  label: `Tgl ${i + 1}`,
+}));
+
+const MONTH_OPTIONS = MONTHS.map((m, idx) => ({
+  value: String(idx),
+  label: m,
+}));
+
 interface BirthdayPlannerProps {
   deals: DealSummaryDto[];
   nowIso: string;
@@ -36,8 +55,7 @@ export function BirthdayPlanner({
   const today = useMemo(() => new Date(nowIso), [nowIso]);
   const [day, setDay] = useState<number>(today.getDate());
   const [month, setMonth] = useState<number>(today.getMonth()); // 0-indexed
-  const [expanded, setExpanded] = useState<boolean>(false);
-  const reduceMotion = useReducedMotion();
+  const [checklistOpen, setChecklistOpen] = useState<boolean>(false);
 
   const daysUntilBirthday = useMemo(() => {
     const startOfToday = new Date(
@@ -80,179 +98,270 @@ export function BirthdayPlanner({
     [activeDeals],
   );
 
-  const statusText = useMemo(() => {
-    if (daysUntilBirthday === 0) return "Hari ini adalah Hari H ulang tahunmu!";
-    if (daysUntilBirthday < 0)
-      return `Ulang tahunmu baru lewat ${Math.abs(daysUntilBirthday)} hari (H+${Math.abs(daysUntilBirthday)} — masih bisa klaim promo H+7/H+30).`;
-    if (daysUntilBirthday <= 7)
-      return `H-${daysUntilBirthday}: Banyak promo H-7 s/d H+7 sudah mulai bisa diklaim!`;
-    if (daysUntilBirthday <= 30)
-      return `H-${daysUntilBirthday}: Waktu terbaik daftar aplikasi wajib H-30 & H-7.`;
-    return `H-${daysUntilBirthday} menuju ulang tahunmu.`;
+  const countdownMeta = useMemo(() => {
+    if (daysUntilBirthday === 0) {
+      return {
+        pill: "HARI H!",
+        pillClass: "bg-emerald text-white",
+        note: "Selamat ulang tahun! Cek promo yang bisa diklaim langsung hari ini.",
+      };
+    }
+    if (daysUntilBirthday < 0) {
+      return {
+        pill: `H+${Math.abs(daysUntilBirthday)}`,
+        pillClass: "bg-success-bg text-emerald border border-success-line",
+        note: "Baru lewat beberapa hari — masih banyak promo berlaku s/d H+7 & H+30.",
+      };
+    }
+    if (daysUntilBirthday <= 7) {
+      return {
+        pill: `H-${daysUntilBirthday}`,
+        pillClass: "bg-accent text-white",
+        note: "Minggu ulang tahun! Promo H-7 s/d H+7 sudah mulai aktif diklaim.",
+      };
+    }
+    if (daysUntilBirthday <= 30) {
+      return {
+        pill: `H-${daysUntilBirthday}`,
+        pillClass: "bg-warn-bg text-amber border border-warn-line",
+        note: "Waktu krusial untuk daftar aplikasi member yang mensyaratkan H-30 / H-7.",
+      };
+    }
+    return {
+      pill: `H-${daysUntilBirthday}`,
+      pillClass: "bg-subtle text-ink border border-hairline",
+      note: "Atur tanggal lahirmu untuk melihat promo mana yang perlu daftar aplikasi lebih awal.",
+    };
   }, [daysUntilBirthday]);
 
   return (
-    <section
-      aria-label="Perencana Persiapan Promo Ulang Tahun"
-      className="mt-16 rounded-2xl bg-subtle/60 p-5 sm:p-8"
-    >
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
-        <div className="flex items-start gap-3.5 max-w-xl">
-          <div className="mt-0.5 rounded-lg bg-accent-soft p-2 text-accent">
-            <CalendarDays className="h-4 w-4" aria-hidden="true" />
-          </div>
-          <div>
-            <h2 className="font-serif text-display-md text-ink">
-              Rencanakan klaim ultahmu
-            </h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
-              {statusText} Beberapa promo butuh persiapan H-30 — atur tanggal
-              lahir untuk lihat checklistnya.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="sr-only" htmlFor="planner-day">
-            Tanggal Lahir
-          </label>
-          <Select
-            id="planner-day"
-            value={day}
-            onChange={(e) => setDay(Number(e.target.value))}
-            className="w-auto py-1.5 text-xs font-semibold tabular-nums"
-          >
-            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-              <option key={d} value={d}>
-                Tgl {d}
-              </option>
-            ))}
-          </Select>
-
-          <label className="sr-only" htmlFor="planner-month">
-            Bulan Lahir
-          </label>
-          <Select
-            id="planner-month"
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            className="w-auto py-1.5 text-xs font-semibold"
-          >
-            {MONTHS.map((m, idx) => (
-              <option key={m} value={idx}>
-                {m}
-              </option>
-            ))}
-          </Select>
-
-          <button
-            type="button"
-            onClick={() => setExpanded((prev) => !prev)}
-            aria-expanded={expanded}
-            aria-controls="planner-checklist"
-            className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-ink/88 pressable focus-ring"
-          >
-            {expanded ? "Tutup Checklist" : "Lihat Checklist"}
-            <ChevronDown
-              className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
-        </div>
-      </div>
-
-      <motion.div
-        id="planner-checklist"
-        initial={false}
-        animate={{
-          height: expanded ? "auto" : 0,
-          opacity: expanded ? 1 : 0,
-        }}
-        transition={
-          reduceMotion
-            ? { duration: 0 }
-            : { type: "spring", bounce: 0, duration: 0.45 }
-        }
-        className="overflow-hidden"
-        aria-hidden={!expanded}
-        inert={!expanded}
+    <>
+      <section
+        aria-label="Perencana Persiapan Promo Ulang Tahun"
+        className="flex h-full flex-col justify-between rounded-3xl border border-hairline bg-surface p-5 sm:p-6 shadow-[0_2px_10px_-4px_rgb(17_19_23/0.06)]"
       >
-        <div className="pt-6 mt-6 border-t border-line-strong/70 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-micro font-bold uppercase text-amber">
-                Wajib daftar aplikasi ({prepAppDeals.length})
-              </h3>
-              <button
-                type="button"
-                onClick={() => onApplyPlannerFilter("prep_apps")}
-                className="rounded-md text-xs font-semibold text-accent hover:text-accent-hover underline-offset-4 hover:underline pressable focus-ring"
-              >
-                Filter di direktori
-              </button>
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+                <CalendarDays className="h-4.5 w-4.5" aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="font-display text-lg font-bold tracking-tight text-ink leading-tight">
+                  Perencana Ultah H-30
+                </h2>
+                <p className="text-[11px] font-medium text-ink-muted">
+                  Siapkan akun sebelum Hari H
+                </p>
+              </div>
             </div>
-            <p className="mt-1.5 text-xs leading-relaxed text-ink-2">
-              Beberapa brand (seperti Starbucks &amp; Boost) menolak klaim jika
-              akun baru dibuat mendekati hari H.
-            </p>
-            <ul className="mt-3 space-y-1.5">
-              {prepAppDeals.slice(0, 5).map((deal) => (
-                <li
-                  key={deal.id}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-surface px-3 py-2 text-xs"
-                >
-                  <Link
-                    href={`/deals/${deal.slug}`}
-                    className="rounded-md font-semibold text-ink hover:text-accent truncate pressable focus-ring"
-                  >
-                    {deal.brandName} — {deal.appName || "App"}
-                  </Link>
-                  <span className="shrink-0 font-mono text-[11px] font-semibold text-amber tabular-nums">
-                    Min. H-{deal.minRegistrationDays}
-                  </span>
-                </li>
-              ))}
-            </ul>
+
+            <span
+              className={cn(
+                "shrink-0 rounded-full px-2.5 py-1 font-mono text-xs font-bold tabular-nums",
+                countdownMeta.pillClass,
+              )}
+            >
+              {countdownMeta.pill}
+            </span>
           </div>
 
-          <div>
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-micro font-bold uppercase text-emerald">
-                Langsung datang bawa KTP ({walkInDeals.length})
-              </h3>
-              <button
-                type="button"
-                onClick={() => onApplyPlannerFilter("walk_in_ktp")}
-                className="rounded-md text-xs font-semibold text-accent hover:text-accent-hover underline-offset-4 hover:underline pressable focus-ring"
-              >
-                Filter di direktori
-              </button>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div>
+              <label className="sr-only" htmlFor="planner-day">
+                Tanggal Lahir
+              </label>
+              <SelectMenu
+                id="planner-day"
+                aria-label="Tanggal lahir"
+                size="sm"
+                value={String(day)}
+                onValueChange={(v) => setDay(Number(v))}
+                options={DAY_OPTIONS}
+                className="font-mono font-semibold tabular-nums"
+              />
             </div>
-            <p className="mt-1.5 text-xs leading-relaxed text-ink-2">
-              Tidak perlu unduh aplikasi terlebih dahulu; cukup tunjukkan
-              KTP/SIM/Paspor asli saat datang.
-            </p>
-            <ul className="mt-3 space-y-1.5">
-              {walkInDeals.slice(0, 5).map((deal) => (
-                <li
-                  key={deal.id}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-surface px-3 py-2 text-xs"
-                >
-                  <Link
-                    href={`/deals/${deal.slug}`}
-                    className="rounded-md font-semibold text-ink hover:text-accent truncate pressable focus-ring"
-                  >
-                    {deal.brandName}
-                  </Link>
-                  <span className="shrink-0 font-mono text-[11px] font-medium text-emerald">
-                    {deal.claimWindow}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div>
+              <label className="sr-only" htmlFor="planner-month">
+                Bulan Lahir
+              </label>
+              <SelectMenu
+                id="planner-month"
+                aria-label="Bulan lahir"
+                size="sm"
+                value={String(month)}
+                onValueChange={(v) => setMonth(Number(v))}
+                options={MONTH_OPTIONS}
+                className="font-semibold"
+              />
+            </div>
           </div>
+
+          <p className="mt-3 text-xs leading-relaxed text-ink-2">
+            {countdownMeta.note}
+          </p>
         </div>
-      </motion.div>
-    </section>
+
+        <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => onApplyPlannerFilter("prep_apps")}
+              className="group rounded-2xl border border-warn-line bg-warn-bg/80 p-3 text-left transition-colors hover:bg-warn-bg pressable focus-ring cursor-pointer"
+            >
+              <div className="flex items-center justify-between gap-1 text-amber">
+                <Smartphone className="h-3.5 w-3.5" aria-hidden="true" />
+                <ArrowRight
+                  className="h-3 w-3 opacity-60 transition-transform group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="mt-1.5 font-display text-xl font-extrabold leading-none text-ink tabular-nums">
+                {prepAppDeals.length}
+              </div>
+              <div className="mt-1 text-[11px] font-semibold text-amber">
+                Wajib Daftar App
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onApplyPlannerFilter("walk_in_ktp")}
+              className="group rounded-2xl border border-success-line bg-success-bg/80 p-3 text-left transition-colors hover:bg-success-bg pressable focus-ring cursor-pointer"
+            >
+              <div className="flex items-center justify-between gap-1 text-emerald">
+                <IdCard className="h-3.5 w-3.5" aria-hidden="true" />
+                <ArrowRight
+                  className="h-3 w-3 opacity-60 transition-transform group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="mt-1.5 font-display text-xl font-extrabold leading-none text-ink tabular-nums">
+                {walkInDeals.length}
+              </div>
+              <div className="mt-1 text-[11px] font-semibold text-emerald">
+                Langsung KTP
+              </div>
+            </button>
+          </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setChecklistOpen(true)}
+            className="w-full h-9 rounded-xl"
+          >
+            <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
+            Buka Checklist Persiapan ({prepAppDeals.length + walkInDeals.length})
+          </Button>
+        </div>
+      </section>
+
+      <Dialog open={checklistOpen} onOpenChange={setChecklistOpen}>
+        <DialogPopup className="max-w-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 font-mono text-[11px] font-bold tabular-nums",
+                  countdownMeta.pillClass,
+                )}
+              >
+                {countdownMeta.pill}
+              </span>
+              <span className="text-xs font-medium text-ink-muted">
+                Ulang tahun: {day} {MONTHS[month]}
+              </span>
+            </div>
+            <DialogTitle className="mt-1">
+              Checklist Persiapan Klaim Ulang Tahun
+            </DialogTitle>
+            <DialogDescription>
+              {countdownMeta.note}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogBody className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-micro font-bold uppercase text-amber">
+                  Wajib Daftar Aplikasi ({prepAppDeals.length})
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChecklistOpen(false);
+                    onApplyPlannerFilter("prep_apps");
+                  }}
+                  className="text-xs font-semibold text-accent hover:underline cursor-pointer"
+                >
+                  Filter semua
+                </button>
+              </div>
+              <p className="text-xs text-ink-2">
+                Brand seperti Starbucks &amp; Boost menolak klaim jika akun baru dibuat mendekati hari H.
+              </p>
+              <ul className="space-y-1.5">
+                {prepAppDeals.slice(0, 8).map((deal) => (
+                  <li key={deal.id}>
+                    <Link
+                      href={`/deals/${deal.slug}`}
+                      onClick={() => setChecklistOpen(false)}
+                      className="flex items-center justify-between gap-2 rounded-xl border border-hairline bg-canvas px-3 py-2 text-xs hover:border-line-strong hover:bg-subtle/70 transition-colors"
+                    >
+                      <span className="font-semibold text-ink truncate">
+                        {deal.brandName} — {deal.appName || "App"}
+                      </span>
+                      <span className="shrink-0 font-mono text-[11px] font-bold text-amber tabular-nums">
+                        Min. H-{deal.minRegistrationDays}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-micro font-bold uppercase text-emerald">
+                  Langsung Datang Bawa KTP ({walkInDeals.length})
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChecklistOpen(false);
+                    onApplyPlannerFilter("walk_in_ktp");
+                  }}
+                  className="text-xs font-semibold text-accent hover:underline cursor-pointer"
+                >
+                  Filter semua
+                </button>
+              </div>
+              <p className="text-xs text-ink-2">
+                Tidak perlu unduh aplikasi; cukup tunjukkan KTP/SIM/Paspor asli saat datang.
+              </p>
+              <ul className="space-y-1.5">
+                {walkInDeals.slice(0, 8).map((deal) => (
+                  <li key={deal.id}>
+                    <Link
+                      href={`/deals/${deal.slug}`}
+                      onClick={() => setChecklistOpen(false)}
+                      className="flex items-center justify-between gap-2 rounded-xl border border-hairline bg-canvas px-3 py-2 text-xs hover:border-line-strong hover:bg-subtle/70 transition-colors"
+                    >
+                      <span className="font-semibold text-ink truncate">
+                        {deal.brandName}
+                      </span>
+                      <span className="shrink-0 font-mono text-[11px] font-medium text-emerald">
+                        {deal.claimWindow}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </DialogBody>
+        </DialogPopup>
+      </Dialog>
+    </>
   );
 }

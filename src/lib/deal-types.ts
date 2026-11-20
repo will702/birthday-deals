@@ -69,6 +69,107 @@ export interface ScrapeRunDto {
   completedAt: string | null;
 }
 
+export interface CategoryMeta {
+  shortLabel: string;
+  barClass: string;
+  badgeClass: string;
+  avatarBgClass: string;
+  avatarTextClass: string;
+  iconColorClass: string;
+}
+
+export function getCategoryMeta(category: string): CategoryMeta {
+  switch (category) {
+    case "F&B":
+      return {
+        shortLabel: "Makan & Resto",
+        barClass: "bg-[#FF5A26]",
+        badgeClass: "bg-[#FFF1EC] text-[#C23111] border-[#FFD3C4]",
+        avatarBgClass: "bg-[#FFF1EC]",
+        avatarTextClass: "text-[#C23111]",
+        iconColorClass: "text-[#E03E1A]",
+      };
+    case "Drink & Cafe":
+      return {
+        shortLabel: "Kopi & Minuman",
+        barClass: "bg-[#D97706]",
+        badgeClass: "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]",
+        avatarBgClass: "bg-[#FFFBEB]",
+        avatarTextClass: "text-[#B45309]",
+        iconColorClass: "text-[#D97706]",
+      };
+    case "Cinema & Entertainment":
+      return {
+        shortLabel: "Hiburan & Bioskop",
+        barClass: "bg-[#2563EB]",
+        badgeClass: "bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]",
+        avatarBgClass: "bg-[#EFF6FF]",
+        avatarTextClass: "text-[#1D4ED8]",
+        iconColorClass: "text-[#2563EB]",
+      };
+    case "Beauty & Retail":
+      return {
+        shortLabel: "Belanja & Kecantikan",
+        barClass: "bg-[#E11D48]",
+        badgeClass: "bg-[#FFF1F2] text-[#BE123C] border-[#FECDD3]",
+        avatarBgClass: "bg-[#FFF1F2]",
+        avatarTextClass: "text-[#BE123C]",
+        iconColorClass: "text-[#E11D48]",
+      };
+    default:
+      return {
+        shortLabel: "Lainnya",
+        barClass: "bg-[#0F766E]",
+        badgeClass: "bg-[#F0FDFA] text-[#0F766E] border-[#99F6E4]",
+        avatarBgClass: "bg-[#F0FDFA]",
+        avatarTextClass: "text-[#0F766E]",
+        iconColorClass: "text-[#0F766E]",
+      };
+  }
+}
+
+export function getBrandInitials(brandName: string): string {
+  const words = brandName
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return "UL";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0]}${words[1][0]}`.toUpperCase();
+}
+
+export function cleanDealDescription(
+  brandName: string,
+  title: string,
+  description: string,
+): string {
+  const raw = description.trim();
+  if (!raw) return "";
+
+  const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let cleaned = raw;
+
+  // Strip duplicated "BrandName Promo BrandName ..." prefixes common in aggregator scrapes
+  if (brandName.trim()) {
+    const b = escapeRe(brandName.trim());
+    cleaned = cleaned.replace(
+      new RegExp(`^${b}\\s+promo\\s+${b}\\s*[:\\-–]?\\s*`, "i"),
+      "",
+    );
+    cleaned = cleaned.replace(new RegExp(`^${b}\\s+promo\\s+`, "i"), "");
+  }
+
+  if (title.trim()) {
+    const t = escapeRe(title.trim());
+    cleaned = cleaned.replace(new RegExp(`^${t}\\s*[:\\-–.]?\\s*`, "i"), "");
+  }
+
+  cleaned = cleaned.trim();
+  if (cleaned.length < 18) return raw;
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
 export function getDiscountBadge(
   discountType: string,
   discountValue: number | null,
@@ -100,25 +201,24 @@ export function getVerificationMeta(status: string): {
 } {
   switch (status) {
     case "ADMIN_VERIFIED":
-      return { label: "Admin Verified", tone: "emerald" };
+      return { label: "Terverifikasi Admin", tone: "emerald" };
     case "SCRAPER_VERIFIED":
-      return { label: "Scraper Aktif", tone: "neutral" };
+      return { label: "Terpantau", tone: "neutral" };
     case "COMMUNITY_SUBMITTED":
       return { label: "Bukti Komunitas", tone: "info" };
     case "STALE":
       return { label: "Perlu Cek Ulang", tone: "warn" };
     case "EXPIRED":
-      return { label: "Berakhir / Expired", tone: "danger" };
+      return { label: "Kedaluwarsa", tone: "danger" };
     default:
       return { label: status, tone: "neutral" };
   }
 }
 
-/** Typographic anchor shared by cards and the detail page:
- *  the deal's value becomes the headline. */
 export function getValueHeadline(
   discountType: string,
   discountValue: number | null,
+  title?: string,
 ): {
   numeral: string;
   unit: string;
@@ -131,15 +231,28 @@ export function getValueHeadline(
     return { numeral: `${discountValue}%`, unit: "diskon", tone: "clay" };
   }
   if (discountType === "BOGO") {
-    return { numeral: "1+1", unit: "gratis satu", tone: "clay" };
+    return { numeral: "1+1", unit: "beli 1 gratis 1", tone: "clay" };
   }
   if (discountType === "FREE_ITEM_WITH_PURCHASE") {
-    return { numeral: "Gratis", unit: "+ min. order", tone: "ink" };
+    return { numeral: "Free Item", unit: "+ min. order", tone: "emerald" };
   }
   if (discountType === "VOUCHER") {
-    return { numeral: "Voucher", unit: "ultah", tone: "ink" };
+    return { numeral: "Voucher", unit: "spesial ultah", tone: "clay" };
   }
-  return { numeral: "Promo", unit: "ultah", tone: "ink" };
+  const lower = (title ?? "").toLowerCase();
+  if (lower.includes("upgrade") || lower.includes("upsize")) {
+    return { numeral: "Upgrade", unit: "gratis ukuran", tone: "clay" };
+  }
+  if (lower.includes("cashback")) {
+    return { numeral: "Cashback", unit: "spesial ultah", tone: "clay" };
+  }
+  if (lower.includes("gratis") || lower.includes("free")) {
+    return { numeral: "Gratis", unit: "birthday treat", tone: "emerald" };
+  }
+  if (lower.includes("voucher") || lower.includes("poin") || lower.includes("point")) {
+    return { numeral: "Bonus", unit: "voucher / poin", tone: "clay" };
+  }
+  return { numeral: "Spesial", unit: "birthday treat", tone: "ink" };
 }
 
 export function getSourceLabel(sourceType: string): string {
