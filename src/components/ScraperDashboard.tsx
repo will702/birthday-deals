@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Play, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import type { ScrapeRunDto } from "@/lib/deal-types";
+import { AdminAiPanel } from "@/components/AdminAiPanel";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -242,6 +243,8 @@ export function ScraperDashboard({
           </div>
         )}
       </section>
+
+      <AdminAiPanel adminToken={adminToken} />
 
       {/* Run History Table */}
       <section className="rounded-3xl border border-hairline bg-surface overflow-hidden">

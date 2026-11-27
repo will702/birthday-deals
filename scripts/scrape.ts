@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-env";
 import { prisma } from "../src/lib/prisma";
 import { runScraperPipeline } from "../src/scraper/runner";
 

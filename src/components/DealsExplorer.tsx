@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { DEAL_CATEGORIES } from "@/lib/validation";
 import { BirthdayPlanner } from "./BirthdayPlanner";
 import { DealCard } from "./DealCard";
+import { RecommendedRail } from "./RecommendedRail";
 import { Button } from "@/components/ui/Button";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -109,6 +110,7 @@ export function DealsExplorer({
   const [commandOpen, setCommandOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(new Set());
   // Entrance animation only on first render; filtering must not re-animate.
   const [hasAnimated, setHasAnimated] = useState(false);
 
@@ -430,6 +432,8 @@ export function DealsExplorer({
           />
         </div>
       </section>
+
+      <RecommendedRail nowIso={nowIso} />
 
       {/* Vibrant Category Quick-Browse Band */}
       <section aria-label="Jelajahi berdasarkan kategori" className="pb-4">
@@ -860,11 +864,14 @@ export function DealsExplorer({
                 : "flex flex-col gap-3",
             )}
           >
-            {filteredDeals.map((deal, index) => (
+            {filteredDeals
+              .filter((deal) => !hiddenIds.has(deal.id))
+              .map((deal, index) => (
               <DealCard
                 key={deal.id}
                 deal={deal}
                 nowIso={nowIso}
+                onDismiss={(id) => setHiddenIds((prev) => new Set(prev).add(id))}
                 layout={viewMode}
                 revealIndex={hasAnimated ? undefined : index}
               />

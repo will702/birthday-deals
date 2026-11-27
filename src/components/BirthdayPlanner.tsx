@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, IdCard, ListChecks, Smartphone } from "lucide-react";
+import { daysUntilBirthday as computeDaysUntilBirthday } from "@/lib/birthday";
 import type { DealSummaryDto } from "@/lib/deal-types";
 import { Button } from "@/components/ui/Button";
 import {
@@ -56,27 +57,47 @@ export function BirthdayPlanner({
   const [day, setDay] = useState<number>(today.getDate());
   const [month, setMonth] = useState<number>(today.getMonth()); // 0-indexed
   const [checklistOpen, setChecklistOpen] = useState<boolean>(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const daysUntilBirthday = useMemo(() => {
-    const startOfToday = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-    );
-    let target = new Date(today.getFullYear(), month, day);
-    if (target.getTime() < startOfToday.getTime()) {
-      const diffPast = Math.round(
-        (startOfToday.getTime() - target.getTime()) / (1000 * 60 * 60 * 24),
-      );
-      if (diffPast <= 7) {
-        return -diffPast; // Still inside H+7 claim window!
+  // Load saved birthday from the profile (and follow edits made in the profile sheet).
+  useEffect(() => {
+    const controller = new AbortController();
+    function apply(p: { birthdayDay?: number | null; birthdayMonth?: number | null } | undefined) {
+      if (p?.birthdayDay && p.birthdayMonth !== null && p.birthdayMonth !== undefined) {
+        setDay(p.birthdayDay);
+        setMonth(p.birthdayMonth);
       }
-      target = new Date(today.getFullYear() + 1, month, day);
     }
-    return Math.round(
-      (target.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24),
-    );
-  }, [day, month, today]);
+    fetch("/api/profile", { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { profile?: Parameters<typeof apply>[0] } | null) => apply(data?.profile))
+      .catch(() => undefined);
+    const onUpdated = (e: Event) =>
+      apply((e as CustomEvent<Parameters<typeof apply>[0]>).detail);
+    window.addEventListener("ultahid:profile-updated", onUpdated);
+    return () => {
+      controller.abort();
+      window.removeEventListener("ultahid:profile-updated", onUpdated);
+    };
+  }, []);
+
+  const persistBirthday = useCallback((nextDay: number, nextMonth: number) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      fetch("/api/profile", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ birthdayDay: nextDay, birthdayMonth: nextMonth }),
+      })
+        .then(() => window.dispatchEvent(new CustomEvent("ultahid:birthday-saved")))
+        .catch(() => undefined);
+    }, 600);
+  }, []);
+
+  const daysUntilBirthday = useMemo(
+    () => computeDaysUntilBirthday(day, month, today),
+    [day, month, today],
+  );
 
   const activeDeals = useMemo(
     () => deals.filter((d) => d.verificationStatus !== "EXPIRED"),
@@ -176,7 +197,10 @@ export function BirthdayPlanner({
                 aria-label="Tanggal lahir"
                 size="sm"
                 value={String(day)}
-                onValueChange={(v) => setDay(Number(v))}
+                onValueChange={(v) => {
+                  setDay(Number(v));
+                  persistBirthday(Number(v), month);
+                }}
                 options={DAY_OPTIONS}
                 className="font-mono font-semibold tabular-nums"
               />
@@ -190,7 +214,10 @@ export function BirthdayPlanner({
                 aria-label="Bulan lahir"
                 size="sm"
                 value={String(month)}
-                onValueChange={(v) => setMonth(Number(v))}
+                onValueChange={(v) => {
+                  setMonth(Number(v));
+                  persistBirthday(day, Number(v));
+                }}
                 options={MONTH_OPTIONS}
                 className="font-semibold"
               />

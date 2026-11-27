@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { DealChat } from "@/components/chat/DealChat";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Toaster } from "@/components/ui/Toaster";
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Suspense>
         <main className="flex-1 w-full">{children}</main>
         <SiteFooter />
+        <DealChat />
         <Toaster />
       </body>
     </html>

@@ -16,6 +16,9 @@ import {
 } from "lucide-react";
 import { DealVerificationPanel } from "@/components/DealVerificationPanel";
 import { ShareDealButton } from "@/components/ShareDealButton";
+import { SimilarDeals } from "@/components/SimilarDeals";
+import { TrackedSourceLink } from "@/components/TrackedSourceLink";
+import { ViewLogger } from "@/components/ViewLogger";
 import { Badge } from "@/components/ui/Badge";
 import { buttonClasses } from "@/components/ui/Button";
 import {
@@ -161,6 +164,7 @@ async function DealDetailLoader({
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <ViewLogger dealId={deal.id} />
       <Link
         href="/"
         className="inline-flex items-center gap-1.5 rounded-xl px-2 py-1 -ml-2 text-sm font-semibold text-ink-muted hover:text-ink hover:bg-subtle/70 pressable focus-ring"
@@ -303,15 +307,14 @@ async function DealDetailLoader({
               {deal.sourceUrl && (
                 <footer className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-4 text-xs">
                   <span className="text-ink-muted">Sumber referensi asli:</span>
-                  <a
+                  <TrackedSourceLink
+                    dealId={deal.id}
                     href={deal.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="inline-flex max-w-full items-center gap-1 rounded-md font-semibold text-accent hover:text-accent-hover underline-offset-4 hover:underline break-all pressable focus-ring"
                   >
                     {deal.sourceUrl}
                     <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  </a>
+                  </TrackedSourceLink>
                 </footer>
               )}
             </div>
@@ -321,6 +324,8 @@ async function DealDetailLoader({
           <div id="verifikasi-komunitas" className="scroll-mt-20">
             <DealVerificationPanel initialDeal={dto} nowIso={now.toISOString()} />
           </div>
+
+          <SimilarDeals slug={deal.slug} nowIso={now.toISOString()} />
         </div>
 
         {/* Sticky Sidebar: Ringkasan Klaim & Persiapan */}
@@ -413,15 +418,14 @@ async function DealDetailLoader({
               </a>
 
               {deal.sourceUrl && (
-                <a
+                <TrackedSourceLink
+                  dealId={deal.id}
                   href={deal.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className={buttonClasses("secondary", "md", "w-full")}
                 >
                   Buka Sumber Resmi
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                </a>
+                </TrackedSourceLink>
               )}
 
               <ShareDealButton title={`${deal.brandName} — ${deal.title}`} />

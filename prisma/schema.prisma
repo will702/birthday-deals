@@ -1,45 +1,54 @@
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL_UNPOOLED")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DATABASE_URL_UNPOOLED")
+  extensions = [vector]
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 model Deal {
-  id                  String   @id @default(cuid())
-  slug                String   @unique
+  id                  String                       @id @default(cuid())
+  slug                String                       @unique
   brandName           String
   brandLogoUrl        String?
-  category            String   // "F&B", "Drink & Cafe", "Cinema & Entertainment", "Beauty & Retail", "Other"
+  category            String // "F&B", "Drink & Cafe", "Cinema & Entertainment", "Beauty & Retail", "Other"
   title               String
-  discountType        String   // "FREE_100", "DISCOUNT_PERCENT", "FREE_ITEM_WITH_PURCHASE", "VOUCHER", "BOGO"
-  discountValue       Int?     // 100 for 100% off, 50 for 50% off, etc.
+  discountType        String // "FREE_100", "DISCOUNT_PERCENT", "FREE_ITEM_WITH_PURCHASE", "VOUCHER", "BOGO"
+  discountValue       Int? // 100 for 100% off, 50 for 50% off, etc.
   description         String
-  termsAndConditions  String   // JSON string array of bullet points
-  claimWindow         String   // e.g. "Hari H", "H-7 s/d H+7", "Bulan Ulang Tahun"
-  requiresApp         Boolean  @default(false)
+  termsAndConditions  String // JSON string array of bullet points
+  claimWindow         String // e.g. "Hari H", "H-7 s/d H+7", "Bulan Ulang Tahun"
+  requiresApp         Boolean                      @default(false)
   appName             String?
   minRegistrationDays Int?
-  requiresIdCard      Boolean  @default(true)
-  minPurchaseIdr      Int      @default(0)
-  locations           String   @default("Nasional (Seluruh Indonesia)")
+  requiresIdCard      Boolean                      @default(true)
+  minPurchaseIdr      Int                          @default(0)
+  locations           String                       @default("Nasional (Seluruh Indonesia)")
+  cities              String[]                     @default([])
+  tags                String[]                     @default([])
+  embedding           Unsupported("vector(1536)")?
+  embeddingUpdatedAt  DateTime?
+  embeddingHash       String? // sha1 of the embedded text; skips re-embedding unchanged deals
   sourceUrl           String?
-  sourceType          String   // "SCRAPER_BRAND", "SCRAPER_AGGREGATOR", "SCRAPER_SEARCH", "COMMUNITY"
-  verificationStatus  String   @default("COMMUNITY_SUBMITTED") // "ADMIN_VERIFIED", "SCRAPER_VERIFIED", "COMMUNITY_SUBMITTED", "STALE", "EXPIRED"
-  validYear           Int      @default(2026)
-  stillWorksCount     Int      @default(1)
-  expiredReportCount  Int      @default(0)
-  freshnessScore      Int      @default(100)
+  sourceType          String // "SCRAPER_BRAND", "SCRAPER_AGGREGATOR", "SCRAPER_SEARCH", "COMMUNITY"
+  verificationStatus  String                       @default("COMMUNITY_SUBMITTED") // "ADMIN_VERIFIED", "SCRAPER_VERIFIED", "COMMUNITY_SUBMITTED", "STALE", "EXPIRED"
+  validYear           Int                          @default(2026)
+  stillWorksCount     Int                          @default(1)
+  expiredReportCount  Int                          @default(0)
+  freshnessScore      Int                          @default(100)
   lastScrapedAt       DateTime?
-  lastVerifiedAt      DateTime @default(now())
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  lastVerifiedAt      DateTime                     @default(now())
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
 
   proofs        ProofSubmission[]
   verifications DealVerification[]
+  interactions  DealInteraction[]
+  savedBy       SavedDeal[]
 
   @@index([category])
   @@index([verificationStatus])
@@ -67,7 +76,7 @@ model DealVerification {
   id               String   @id @default(cuid())
   dealId           String
   deal             Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  voteType         String   // "STILL_WORKS" | "EXPIRED_OR_CHANGED"
+  voteType         String // "STILL_WORKS" | "EXPIRED_OR_CHANGED"
   comment          String?
   proofImageUrl    String?
   proofLinkUrl     String?
@@ -80,7 +89,7 @@ model DealVerification {
 model ScrapeRun {
   id           String    @id @default(cuid())
   sourceName   String
-  status       String    // "RUNNING", "SUCCESS", "PARTIAL", "FAILED"
+  status       String // "RUNNING", "SUCCESS", "PARTIAL", "FAILED"
   dealsFound   Int       @default(0)
   dealsUpdated Int       @default(0)
   dealsCreated Int       @default(0)
@@ -89,4 +98,118 @@ model ScrapeRun {
   completedAt  DateTime?
 
   @@index([startedAt])
+}
+
+// ---- Personalization ----
+
+model Visitor {
+  id         String   @id // anonymous id from the signed uid_anon cookie
+  userId     String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UserProfile {
+  id                  String   @id @default(cuid())
+  visitorId           String?  @unique
+  userId              String?  @unique
+  birthdayDay         Int?
+  birthdayMonth       Int? // 0-indexed (0 = Januari)
+  city                String?
+  preferredCategories String[] @default([])
+  appOk               Boolean  @default(true)
+  updatedAt           DateTime @updatedAt
+}
+
+model DealInteraction {
+  id        String   @id @default(cuid())
+  visitorId String
+  userId    String?
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  type      String // VIEW | CLICK_SOURCE | SAVE | UNSAVE | CLAIMED | DISMISS
+  createdAt DateTime @default(now())
+
+  @@index([dealId])
+  @@index([visitorId])
+  @@index([userId])
+  @@index([type, dealId])
+}
+
+model SavedDeal {
+  id        String   @id @default(cuid())
+  visitorId String? // null for user-owned rows
+  userId    String?
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, dealId])
+  @@index([dealId])
+}
+
+// ---- Better Auth ----
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }

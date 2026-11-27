@@ -7,9 +7,12 @@ import {
   FileCheck2,
   IdCard,
   Image as ImageIcon,
+  Sparkles,
   Smartphone,
   Store,
 } from "lucide-react";
+import { DealCardActions } from "@/components/DealCardActions";
+import { TrackedSourceLink } from "@/components/TrackedSourceLink";
 import { Badge, StatusDot } from "@/components/ui/Badge";
 import {
   cleanDealDescription,
@@ -31,6 +34,10 @@ interface DealCardProps {
   preview?: boolean;
   /** Grid card (default) or horizontal compact list row. */
   layout?: "grid" | "list";
+  /** Why this deal was recommended (Indonesian strings); rendered as chips. */
+  reasons?: string[];
+  /** Shows a "not interested" button; invoked after the DISMISS interaction is logged. */
+  onDismiss?: (dealId: string) => void;
 }
 
 const numeralToneClasses: Record<string, string> = {
@@ -45,6 +52,8 @@ export function DealCard({
   revealIndex,
   preview,
   layout = "grid",
+  reasons,
+  onDismiss,
 }: DealCardProps) {
   const statusMeta = getVerificationMeta(deal.verificationStatus);
   const categoryMeta = getCategoryMeta(deal.category);
@@ -71,6 +80,21 @@ export function DealCard({
       Langsung Klaim
     </span>
   );
+
+  const reasonChips =
+    reasons && reasons.length > 0 ? (
+      <ul className="mt-2.5 flex flex-wrap gap-1.5" aria-label="Alasan rekomendasi">
+        {reasons.map((reason) => (
+          <li
+            key={reason}
+            className="inline-flex items-center gap-1 rounded-full border border-accent/20 bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent-hover"
+          >
+            <Sparkles className="h-3 w-3 shrink-0" aria-hidden="true" />
+            {reason}
+          </li>
+        ))}
+      </ul>
+    ) : null;
 
   if (layout === "list") {
     return (
@@ -147,6 +171,7 @@ export function DealCard({
             </h3>
 
             <p className="mt-1 text-xs text-ink-2 line-clamp-1">{cleanedDescription}</p>
+            {reasonChips}
           </div>
         </div>
 
@@ -178,6 +203,14 @@ export function DealCard({
               {headline.unit}
             </span>
           </div>
+
+          {!preview && (
+            <DealCardActions
+              dealId={deal.id}
+              brandName={deal.brandName}
+              onDismiss={onDismiss}
+            />
+          )}
 
           {!preview && (
             <ArrowUpRight
@@ -293,6 +326,7 @@ export function DealCard({
           <p className="mt-1.5 text-xs sm:text-[13px] leading-relaxed text-ink-2 line-clamp-2">
             {cleanedDescription}
           </p>
+          {reasonChips}
 
           {(deal.requiresApp || deal.requiresIdCard) && (
             <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-ink-muted">
@@ -373,17 +407,23 @@ export function DealCard({
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
+              {!preview && (
+                <DealCardActions
+                  dealId={deal.id}
+                  brandName={deal.brandName}
+                  onDismiss={onDismiss}
+                />
+              )}
               {deal.sourceUrl && !preview && (
-                <a
+                <TrackedSourceLink
+                  dealId={deal.id}
                   href={deal.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="relative z-10 rounded-lg p-1.5 text-ink-muted hover:bg-subtle hover:text-ink pressable focus-ring"
                   title="Buka halaman sumber asli"
                   aria-label={`Buka sumber ${deal.brandName}`}
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+                </TrackedSourceLink>
               )}
               {!preview && (
                 <span

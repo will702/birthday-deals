@@ -1,4 +1,6 @@
+import { parseCities } from "../lib/cities";
 import { prisma } from "../lib/prisma";
+import { embedDeals } from "../lib/recommend/embeddings";
 import { agenticAdapter, createAgenticAdapter, type AgenticOptions } from "./adapters/agentic";
 import { aggregatorsAdapter } from "./adapters/aggregators";
 import { officialBrandsAdapter } from "./adapters/official-brands";
@@ -189,6 +191,7 @@ async function executePipeline(options?: {
 
     let created = 0;
     let updated = 0;
+    const touchedIds = new Set<string>();
 
     let failed = 0;
     const failureMessages: string[] = [];
@@ -241,6 +244,7 @@ async function executePipeline(options?: {
             },
           });
           updated += 1;
+          touchedIds.add(matched.id);
         } else {
           let slug = uniqueSlug(normalized.slug, existingBySlug);
           let createdDeal: Awaited<ReturnType<typeof prisma.deal.create>> | null = null;
@@ -264,6 +268,7 @@ async function executePipeline(options?: {
                   requiresIdCard: normalized.requiresIdCard,
                   minPurchaseIdr: normalized.minPurchaseIdr,
                   locations: normalized.locations,
+                  cities: parseCities(normalized.locations),
                   sourceUrl: normalized.sourceUrl,
                   sourceType: normalized.sourceType,
                   verificationStatus: normalized.verificationStatus,
@@ -295,6 +300,7 @@ async function executePipeline(options?: {
           existingBySlug.set(createdDeal.slug, createdDeal);
           addToBrandRoot(rootKey, createdDeal);
           created += 1;
+          touchedIds.add(createdDeal.id);
         }
       } catch (err) {
         failed += 1;
@@ -304,6 +310,15 @@ async function executePipeline(options?: {
           );
         }
         console.error(`[scraper] gagal menyimpan deal "${raw.title}":`, err);
+      }
+    }
+
+    // Non-fatal: skipped automatically when no AI Gateway credentials are present.
+    if (touchedIds.size > 0) {
+      try {
+        await embedDeals([...touchedIds]);
+      } catch (err) {
+        console.error("[scraper] embedding gagal (diabaikan):", err);
       }
     }
 

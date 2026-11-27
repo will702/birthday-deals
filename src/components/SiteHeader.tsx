@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Compass, Menu, Plus, Radar, Search } from "lucide-react";
+import { CalendarDays, Compass, Menu, Plus, Radar, Search } from "lucide-react";
+import { ProfileSheet } from "@/components/ProfileSheet";
 import { buttonClasses } from "@/components/ui/Button";
 import {
   Sheet,
@@ -91,6 +92,12 @@ export function SiteHeader() {
             Direktori
           </Link>
           <Link
+            href="/rencana"
+            className={cn(navLinkClass(pathname === "/rencana"), "hidden sm:inline-flex")}
+          >
+            Rencana
+          </Link>
+          <Link
             href="/scraper"
             className={cn(navLinkClass(pathname === "/scraper"), "hidden sm:inline-flex")}
           >
@@ -105,6 +112,8 @@ export function SiteHeader() {
             <span className="sm:hidden">Kirim Bukti</span>
             <span className="hidden sm:inline">Kirim Bukti Promo</span>
           </Link>
+
+          <ProfileSheet />
 
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger
@@ -141,6 +150,23 @@ export function SiteHeader() {
                 >
                   <Compass className="h-4 w-4" aria-hidden="true" />
                   Direktori Promo
+                </SheetClose>
+
+                <SheetClose
+                  render={
+                    <Link
+                      href="/rencana"
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold pressable",
+                        pathname === "/rencana"
+                          ? "bg-ink text-white"
+                          : "bg-canvas text-ink hover:bg-subtle",
+                      )}
+                    />
+                  }
+                >
+                  <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                  Rencana Ulang Tahun
                 </SheetClose>
 
                 <SheetClose
