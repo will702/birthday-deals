@@ -1,6 +1,6 @@
 import { hasGatewayCredentials } from "@/lib/recommend/embeddings";
 
-export const DEFAULT_CHAT_MODEL = "anthropic/claude-haiku-5-5";
+export const DEFAULT_CHAT_MODEL = "google/gemini-2.5-flash";
 
 /** Gateway model id ("provider/model") used by chat, plan narrative and admin AI tools. */
 export function getChatModel(): string {

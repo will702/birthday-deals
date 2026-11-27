@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { embed, embedMany } from "ai";
 import { prisma } from "@/lib/prisma";
 
-export const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
+export const DEFAULT_EMBEDDING_MODEL = "cohere/embed-v4.0";
 export const EMBEDDING_DIMENSIONS = 1536;
 
 export interface SimilarHit {
