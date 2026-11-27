@@ -5,6 +5,7 @@ import type {
   RawScrapedDeal,
   SourceHealth,
 } from "./types";
+import { cleanBrandName, ZODIAC_RE } from "./dedupe";
 
 export function getCurrentYear(now: Date = new Date()): number {
   return now.getFullYear();
@@ -256,22 +257,43 @@ export function detectExpirationSignals(text: string, referenceYear: number = ge
   return { likelyExpired: false, reason: null };
 }
 
+const CUSTOMER_BIRTHDAY_RE =
+  /\b(birthday\s*treat|birthday\s*reward|birthday\s*deals|birthday\s*gift|birthday\s*surprise|yang\s*berulang\s*tahun|hari\s*ulang\s*tahunmu|bulan\s*ulang\s*tahunmu|tunjukkan\s*ktp|kartu\s*identitas|tanggal\s*lahir)\b/i;
+
 export function isBrandAnniversaryPromo(title: string, text: string = ""): boolean {
   const combined = `${title} ${text}`.toLowerCase();
-  const hasCustomerBirthdaySignals =
-    /\b(birthday\s*treat|birthday\s*reward|birthday\s*deals|birthday\s*gift|birthday\s*surprise|yang\s*berulang\s*tahun|hari\s*ulang\s*tahunmu|bulan\s*ulang\s*tahunmu|tunjukkan\s*ktp|kartu\s*identitas|tanggal\s*lahir)\b/i.test(
-      combined
-    );
+  const hasCustomerBirthdaySignals = CUSTOMER_BIRTHDAY_RE.test(combined);
 
-  // Explicit company anniversary patterns (e.g. "Ulang Tahun ke-9", "Ulang Tahun 27", "Anniversary ke-44")
+  // Explicit company anniversary patterns (e.g. "Ulang Tahun ke-9", "Ulang Tahun 27", "Anniversary ke-44",
+  // "HUT ke-17", "Anniversary Menu Serba Rp23.000", "Platinum Resto Anniversary")
   const hasAnniversaryPattern =
     /\b(?:ulang\s*tahun|hut|anniversary)\s*(?:ke[-\s]*)?\d{1,3}\b/i.test(title) ||
+    /\b\d{1,3}(?:st|nd|rd|th)\s*anniversary\b/i.test(title) ||
+    /\banniversary\b/i.test(title) ||
+    /\bhut\s*(?:ke[-\s]*)?\d{1,3}\b/i.test(combined) ||
+    /\bulang\s*tahun\s*ke[-\s]*\d{1,3}\b/i.test(combined) ||
+    /\banniversary\s*menu\b/i.test(combined) ||
     /\bpaket\s*ulang\s*tahun\s*anak\b/i.test(title);
 
-  if (hasAnniversaryPattern && !hasCustomerBirthdaySignals) {
-    return true;
-  }
-  return false;
+  return hasAnniversaryPattern && !hasCustomerBirthdaySignals;
+}
+
+const OWN_BIRTHDAY_TIE_RE =
+  /\b(?:tanggal|tgl)\s*(?:lahir|ulang\s*tahun)\b|\bdate\s*of\s*birth\b|\bbirth\s*date\b|\bhari\s*ulang\s*tahun(?:mu|\s*(?:anda|kamu))\b|\bbulan\s*ulang\s*tahun(?:mu|\s*(?:anda|kamu))\b|\byour\s*birthday\b|\bon\s*your\s*birth|\bkartu\s*identitas\b|\bktp\b/i;
+
+/** Zodiac-sign promos (sign in title/brand, or zodiac wording) unless tied to the user's own birthday date. */
+export function isZodiacPromo(title: string, text: string = ""): boolean {
+  const zodiacInTitle = ZODIAC_RE.test(title);
+  const zodiacWording = /\b(?:zodiac|zodiak|horoskop|horoscope)\b/i.test(`${title} ${text}`);
+  if (!zodiacInTitle && !(zodiacWording && ZODIAC_RE.test(text))) return false;
+  return !OWN_BIRTHDAY_TIE_RE.test(`${title} ${text}`);
+}
+
+/** Reason a raw deal must be dropped, or null when it is acceptable. */
+export function rejectionReason(raw: RawScrapedDeal): string | null {
+  if (isZodiacPromo(`${raw.title} ${raw.brandName}`, raw.rawText)) return "promo zodiak";
+  if (isBrandAnniversaryPromo(raw.title, raw.rawText)) return "anniversary brand";
+  return null;
 }
 
 export function isValidBrandHeading(heading: string): boolean {
@@ -404,8 +426,8 @@ export function normalizeScrapedDeal(
   });
 
   return {
-    slug: slugifyBrandDeal(raw.brandName, raw.title),
-    brandName: raw.brandName.trim(),
+    slug: slugifyBrandDeal(cleanBrandName(raw.brandName), raw.title),
+    brandName: cleanBrandName(raw.brandName),
     brandLogoUrl: raw.brandLogoUrl ?? null,
     category,
     title: raw.title.trim(),
