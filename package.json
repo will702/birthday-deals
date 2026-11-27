@@ -12,6 +12,11 @@
     "db:push": "prisma db push",
     "scrape": "tsx scripts/scrape.ts",
     "backfill": "tsx scripts/backfill.ts",
+    "db:local:setup": "scripts/with-local-db.sh sh -c \"npx prisma db execute --file prisma/sql/pgvector.sql --schema prisma/schema.prisma && npx prisma db push --skip-generate && npx prisma db execute --file prisma/sql/post-push.sql --schema prisma/schema.prisma\"",
+    "db:local:pull": "tsx scripts/local-db.ts pull",
+    "db:local:push": "tsx scripts/local-db.ts push",
+    "scrape:local": "scripts/with-local-db.sh tsx scripts/scrape.ts",
+    "backfill:local": "scripts/with-local-db.sh tsx scripts/backfill.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

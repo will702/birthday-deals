@@ -20,6 +20,24 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Local scraping (scrape locally, push to Neon later)
+
+Uses a local pgvector Postgres (Docker container `ultahid-pg` on port 54329). Connection lives in the
+gitignored `.env.scrape-local` (`DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `PRISMA_NO_ADAPTER=1`).
+
+```bash
+npm run db:local:setup            # once: pgvector + schema + post-push indexes on the local DB
+npm run db:local:pull             # copy remote deals/proofs/runs/embeddings into local (dedup baseline)
+npm run scrape:local -- --no-freshness   # same flags as `npm run scrape`
+npm run db:local:push             # preview: new / updated deals, runs, conflicts
+npm run db:local:push -- --apply  # write to the remote (Neon) database
+```
+
+Push only moves scraper data (deals, embeddings, proofs of new deals, scrape runs). A deal edited on remote
+after the last pull is skipped as a conflict; pull again and re-scrape to pick it up. `pull` refuses to
+overwrite unpushed local changes unless given `--force`. Push never deletes: deals removed locally (duplicates,
+junk) must also be deleted on remote.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
