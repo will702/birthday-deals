@@ -201,7 +201,8 @@ async function push(apply: boolean) {
     if (created.length) await remoteDb.deal.createMany({ data: created });
     if (proofs.length) await remoteDb.proofSubmission.createMany({ data: proofs, skipDuplicates: true });
     for (const d of updated) await remoteDb.deal.update({ where: { id: d.id }, data: pick(d) });
-    for (const id of touched) await writeEmbedding(remoteDb, id, embeddings.get(id) ?? null);
+    // Only write embeddings we actually have: a missing local embedding must not wipe the remote one.
+    for (const [id, embedding] of embeddings) await writeEmbedding(remoteDb, id, embedding);
     if (runs.length) await remoteDb.scrapeRun.createMany({ data: runs, skipDuplicates: true });
 
     // Pushed state is now the baseline: record a fresh pull marker.
