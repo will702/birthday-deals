@@ -422,7 +422,7 @@ export function normalizeScrapedDeal(
     locations: raw.locations?.trim() || "Nasional (Seluruh Indonesia)",
     sourceUrl: raw.sourceUrl,
     sourceType: raw.sourceType,
-    verificationStatus: "SCRAPER_VERIFIED",
+    verificationStatus: raw.lowTrust ? "COMMUNITY_SUBMITTED" : "SCRAPER_VERIFIED",
     validYear: getCurrentYear(now),
     freshnessScore,
     proofNotes:

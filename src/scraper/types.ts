@@ -47,6 +47,11 @@ export interface RawScrapedDeal {
   discountTypeHint?: DiscountType;
   discountValueHint?: number | null;
   sourceVerifiedLive?: boolean;
+  /**
+   * Low-trust marker (e.g. public social posts). Normalizes to COMMUNITY_SUBMITTED so the deal
+   * shows as "needs check" and never overwrites higher-trust records or bumps freshness.
+   */
+  lowTrust?: boolean;
 }
 
 export interface NormalizedDealInput {

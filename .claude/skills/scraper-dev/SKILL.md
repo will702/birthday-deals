@@ -5,7 +5,7 @@ description: Work on the birthday-deals scraping engine - add or fix a source ad
 
 # Scraper development
 
-Next.js 16 app (see AGENTS.md: read `node_modules/next/dist/docs/` before route work). Scraper code lives in `src/scraper/`; results upsert into SQLite via Prisma.
+Next.js 16 app (see AGENTS.md: read `node_modules/next/dist/docs/` before route work). Scraper code lives in `src/scraper/`; results upsert into Neon Postgres via Prisma.
 
 ## Layout
 
@@ -19,6 +19,15 @@ Next.js 16 app (see AGENTS.md: read `node_modules/next/dist/docs/` before route 
 | `src/scraper/freshness-checker.ts` | Re-verifies old deals. |
 | `src/scraper/agent/` | Agentic layer: `schema.ts`, `extract.ts` (single-shot), `deal-agent.ts` (`ToolLoopAgent`), `tools.ts`, `ssrf.ts`. |
 | `src/scraper/adapters/agentic.ts` | Opt-in adapter wrapping the agent. Skipped when `AI_GATEWAY_API_KEY` is unset. |
+| `src/scraper/firecrawl.ts` | Budgeted Firecrawl client (`firecrawlScrape`, `firecrawlSearch`). Lazy, needs `FIRECRAWL_API_KEY`; SSRF-guarded; per-run credit cap `FIRECRAWL_MAX_CREDITS` (default 200), `resetFirecrawlBudget()` per run. |
+| `src/scraper/fetch-tiers.ts` | `fetchWithTiers`: http -> Playwright (SPA shells, never on Vercel) -> Firecrawl. Escalates on 403/429/503, challenge pages, empty SPA shells or a missing `requirePattern`; robots.txt disallow is final (never escalated). `SCRAPER_TIERS` / `--tiers` restricts tiers. |
+| `src/scraper/agent/page-extract.ts` | `extractPageDeals` / `extractTextDeals`: tiered fetch + LLM extraction with evidence check; used as fallback in `aggregators`/`search-discovery` when cheerio rules find nothing. |
+| `src/scraper/adapters/brands-extended.ts` + `sources/brands.ts` | Verified official brand birthday pages (only add URLs you verified). Optional per-source cheerio `selectors`, else LLM. |
+| `src/scraper/adapters/blogs.ts` | Discovers promo articles (DuckDuckGo + Firecrawl search), dedupes, caps pages, LLM-extracts with evidence (`SCRAPER_AGGREGATOR`). |
+| `src/scraper/adapters/social-public.ts` + `sources/social.ts` | PUBLIC social snippets/OG metadata only (no login/cookies). Deals are `lowTrust` (COMMUNITY_SUBMITTED, needs check) and never overwrite existing records. |
+| `src/scraper/dry-run.ts` | `npm run scrape -- --dry-run --source=...`: runs adapters and normalizes, no DB writes. |
+
+Default run = `official-brands`, `aggregators`, `search-discovery`, plus `brands-extended` and `blogs` when an AI key is present. `agentic` and `social-public` are explicit (`--source=`). `POST /api/scraper/run` also accepts `Authorization: Bearer $CRON_SECRET` (Vercel Schedule in `vercel.ts`).
 
 ## Add a plain adapter
 
@@ -53,4 +62,4 @@ Vet before adopting: license (avoid AGPL for embedding), last push, stars; for s
 ## Verify
 
 `npm test`, `npx tsc --noEmit`, `npm run lint`, then `npm run scrape -- --no-freshness` and check `/scraper`.
-`POST /api/scraper/run` requires the `x-admin-token` header when `ADMIN_TOKEN` is set.
+`POST /api/scraper/run` requires the `x-admin-token` header (or the `CRON_SECRET` bearer) and fails closed when neither secret is configured.
