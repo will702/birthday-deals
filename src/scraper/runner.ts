@@ -1,22 +1,47 @@
 import { prisma } from "../lib/prisma";
 import { agenticAdapter, createAgenticAdapter, type AgenticOptions } from "./adapters/agentic";
+import { isAiAvailable } from "./agent/page-extract";
 import { aggregatorsAdapter } from "./adapters/aggregators";
+import { blogsAdapter } from "./adapters/blogs";
+import { brandsExtendedAdapter } from "./adapters/brands-extended";
 import { officialBrandsAdapter } from "./adapters/official-brands";
 import { searchDiscoveryAdapter } from "./adapters/search-discovery";
+import { socialPublicAdapter } from "./adapters/social-public";
+import { getFirecrawlUsage, resetFirecrawlBudget } from "./firecrawl";
 import { runFreshnessChecker, type FreshnessSummary } from "./freshness-checker";
 import { closeBrowser } from "./browser";
 import { normalizeScrapedDeal } from "./normalizer";
 import type { AdapterResult, ScraperAdapter } from "./types";
 
-const ADAPTER_MAP: Record<string, ScraperAdapter> = {
+export const ADAPTER_MAP: Record<string, ScraperAdapter> = {
   "official-brands": officialBrandsAdapter,
   aggregators: aggregatorsAdapter,
   "search-discovery": searchDiscoveryAdapter,
   agentic: agenticAdapter,
+  "brands-extended": brandsExtendedAdapter,
+  blogs: blogsAdapter,
+  "social-public": socialPublicAdapter,
 };
 
 /** Adapters that only run when explicitly selected (cost money / need credentials). */
-const OPT_IN_ADAPTERS = new Set(["agentic"]);
+const OPT_IN_ADAPTERS = new Set(["agentic", "brands-extended", "blogs", "social-public"]);
+
+/** Opt-in adapters that join the default run automatically when an LLM is configured. */
+const AUTO_WITH_AI = new Set(["brands-extended", "blogs"]);
+
+/** Adapter keys used when no `sources` are selected. social-public and agentic stay explicit. */
+export function defaultAdapterKeys(): string[] {
+  const withAi = isAiAvailable();
+  return Object.keys(ADAPTER_MAP).filter(
+    (k) => !OPT_IN_ADAPTERS.has(k) || (withAi && AUTO_WITH_AI.has(k)),
+  );
+}
+
+export function resolveAdapterKeys(sources?: string[]): string[] {
+  return sources && sources.length > 0
+    ? sources.filter((k) => Boolean(ADAPTER_MAP[k]))
+    : defaultAdapterKeys();
+}
 
 function brandRootKey(name: string): string {
   return name
@@ -122,10 +147,8 @@ async function executePipeline(options?: {
   /** Overrides for the opt-in agentic adapter (CLI --query / --seeds). */
   agent?: AgenticOptions;
 }): Promise<ScraperRunOutput> {
-  const selectedKeys =
-    options?.sources && options.sources.length > 0
-      ? options.sources.filter((k) => Boolean(ADAPTER_MAP[k]))
-      : Object.keys(ADAPTER_MAP).filter((k) => !OPT_IN_ADAPTERS.has(k));
+  const selectedKeys = resolveAdapterKeys(options?.sources);
+  resetFirecrawlBudget();
 
   const runResults: ScraperRunOutput["runs"] = [];
   const existingDeals = await prisma.deal.findMany({
@@ -164,6 +187,10 @@ async function executePipeline(options?: {
     let result: AdapterResult;
     try {
       result = await adapter.run();
+      const fc = getFirecrawlUsage();
+      if (fc.calls > 0) {
+        result.notes = [...(result.notes ?? []), `Firecrawl: ${fc.creditsUsed}/${fc.maxCredits} kredit (kumulatif run).`];
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Adapter crashed";
       await prisma.scrapeRun.update({
@@ -213,6 +240,8 @@ async function executePipeline(options?: {
           const shouldPreserveAuthoritative =
             matched.verificationStatus === "ADMIN_VERIFIED" ||
             matched.verificationStatus === "COMMUNITY_SUBMITTED" ||
+            // Low-trust sources (public social posts) never overwrite an existing record.
+            raw.lowTrust === true ||
             (matched.sourceType === "SCRAPER_BRAND" && normalized.sourceType !== "SCRAPER_BRAND") ||
             (matched.sourceType === "SCRAPER_AGGREGATOR" &&
               normalized.sourceType === "SCRAPER_SEARCH");
@@ -221,8 +250,8 @@ async function executePipeline(options?: {
             where: { id: matched.id },
             data: {
               lastScrapedAt: now,
-              lastVerifiedAt: raw.sourceVerifiedLive ? now : undefined,
-              freshnessScore: Math.max(80, normalized.freshnessScore),
+              lastVerifiedAt: raw.sourceVerifiedLive && !raw.lowTrust ? now : undefined,
+              ...(raw.lowTrust ? {} : { freshnessScore: Math.max(80, normalized.freshnessScore) }),
               ...(shouldPreserveAuthoritative
                 ? {}
                 : {
