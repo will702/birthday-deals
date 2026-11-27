@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ["playwright", "playwright-core", "@prisma/client", "prisma", "cheerio"],
+  serverExternalPackages: ["playwright", "playwright-core", "@prisma/client", "prisma", "cheerio", "@mendable/firecrawl-js"],
   turbopack: {
     rules: {
       "*.css": {

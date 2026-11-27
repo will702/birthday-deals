@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import pLimit from "p-limit";
+import { extractPageDeals, isAiAvailable } from "../agent/page-extract";
 import { fetchPage } from "../http";
 import {
   detectExpirationSignals,
@@ -97,6 +98,7 @@ export const searchDiscoveryAdapter: ScraperAdapter = {
             return;
           }
 
+          let pageDeals = 0;
           const $ = cheerio.load(page.html);
           $("script, style, figcaption, .caption, .photo-caption").remove();
           $("h2, h3").each((_, headingEl) => {
@@ -141,6 +143,7 @@ export const searchDiscoveryAdapter: ScraperAdapter = {
                 ? firstSentence
                 : `Promo Ulang Tahun ${brandName}`;
 
+            pageDeals += 1;
             deals.push({
               brandName,
               title,
@@ -151,6 +154,20 @@ export const searchDiscoveryAdapter: ScraperAdapter = {
               proofNotes: `Ditemukan via web discovery pada ${url}`,
             });
           });
+
+          if (pageDeals === 0 && isAiAvailable()) {
+            const fb = await extractPageDeals(url, {
+              sourceType: "SCRAPER_SEARCH",
+              fetchOptions: { allowPlaywright: true, timeoutMs: 10_000 },
+            });
+            notes.push(`Fallback AI ${fb.note}`);
+            for (const d of fb.deals) {
+              const key = d.brandName.toLowerCase();
+              if (seenHeadlines.has(key)) continue;
+              seenHeadlines.add(key);
+              deals.push(d);
+            }
+          }
         })
       )
     );

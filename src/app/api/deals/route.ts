@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
+import { canonicalCity, NATIONWIDE, parseCities } from "@/lib/cities";
 import { prisma } from "@/lib/prisma";
 import { createDealSchema } from "@/lib/validation";
 import { computeFreshnessScore, slugifyBrandDeal } from "@/scraper/normalizer";
@@ -90,6 +91,15 @@ export async function GET(req: Request) {
       where.verificationStatus = "STALE";
     } else if (status === "expired") {
       where.verificationStatus = "EXPIRED";
+    }
+
+    const city = canonicalCity(searchParams.get("city"));
+    if (city) {
+      const existing = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];
+      where.AND = [
+        ...existing,
+        { OR: [{ cities: { hasSome: [city, NATIONWIDE] } }, { cities: { isEmpty: true } }] },
+      ];
     }
 
     let orderBy: Prisma.DealOrderByWithRelationInput[] = [
@@ -200,6 +210,7 @@ export async function POST(req: Request) {
         requiresIdCard: input.requiresIdCard,
         minPurchaseIdr: input.minPurchaseIdr,
         locations: input.locations,
+        cities: parseCities(input.locations),
         sourceUrl: input.proofLinkUrl,
         sourceType: "COMMUNITY",
         verificationStatus: "COMMUNITY_SUBMITTED",

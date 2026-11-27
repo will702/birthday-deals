@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 export function StatTile({
   label,
@@ -20,16 +21,17 @@ export function StatTile({
           ? "text-danger-ink"
           : "text-ink";
   return (
-    <div className="flex min-w-0 flex-col gap-0.5">
+    <div className="flex min-w-0 flex-col gap-1">
       <p
-        className={`font-serif text-[1.75rem] leading-none tracking-tight tabular-nums ${valueTone}`}
+        className={cn(
+          "font-display text-[1.875rem] font-extrabold leading-none tracking-tight tabular-nums",
+          valueTone,
+        )}
       >
         {value}
       </p>
-      <p className="text-micro font-medium uppercase text-ink-muted">{label}</p>
-      {detail ? (
-        <p className="text-xs text-ink-muted">{detail}</p>
-      ) : null}
+      <p className="text-micro font-semibold uppercase text-ink-muted">{label}</p>
+      {detail ? <p className="text-xs text-ink-muted">{detail}</p> : null}
     </div>
   );
 }

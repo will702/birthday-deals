@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import pLimit from "p-limit";
+import { extractPageDeals, isAiAvailable } from "../agent/page-extract";
 import { fetchPage } from "../http";
 import {
   detectExpirationSignals,
@@ -13,7 +14,7 @@ const KATALOGPROMOSI_URL =
 const FOODIERATE_URL = "https://www.foodierate.com/deal/food/birthday-offer";
 const GILADISKON_URL = "https://www.giladiskon.com/search?q=ulang+tahun";
 
-async function scrapeKatalogPromosi(): Promise<{
+async function scrapeKatalogPromosiRules(): Promise<{
   deals: RawScrapedDeal[];
   errors: string[];
   notes: string[];
@@ -107,7 +108,7 @@ async function scrapeKatalogPromosi(): Promise<{
   return { deals, errors, notes };
 }
 
-async function scrapeFoodierate(): Promise<{
+async function scrapeFoodierateRules(): Promise<{
   deals: RawScrapedDeal[];
   errors: string[];
   notes: string[];
@@ -163,7 +164,7 @@ async function scrapeFoodierate(): Promise<{
   return { deals: deals.slice(0, 15), errors, notes };
 }
 
-async function scrapeGilaDiskon(): Promise<{
+async function scrapeGilaDiskonRules(): Promise<{
   deals: RawScrapedDeal[];
   errors: string[];
   notes: string[];
@@ -209,6 +210,38 @@ async function scrapeGilaDiskon(): Promise<{
   notes.push(`GilaDiskon: mengekstrak ${deals.length} promo relevan.`);
   return { deals: deals.slice(0, 10), errors, notes };
 }
+
+type ScrapeParts = { deals: RawScrapedDeal[]; errors: string[]; notes: string[] };
+
+/**
+ * Closes the "cheerio rules found nothing" gap: when the rule-based parse yields no deals and an
+ * LLM is available, extract from the page text (fetched via http/Firecrawl tiers) with evidence.
+ */
+async function withLlmFallback(
+  rules: () => Promise<ScrapeParts>,
+  url: string,
+  label: string,
+): Promise<ScrapeParts> {
+  const result = await rules();
+  if (result.deals.length > 0 || !isAiAvailable()) return result;
+  const fb = await extractPageDeals(url, {
+    sourceType: "SCRAPER_AGGREGATOR",
+    fetchOptions: { allowPlaywright: true, timeoutMs: 12_000 },
+  });
+  if (fb.deals.length === 0) {
+    return { ...result, notes: [...result.notes, `${label} fallback AI: ${fb.note}`] };
+  }
+  return {
+    deals: fb.deals.slice(0, 15),
+    errors: [],
+    notes: [...result.notes, `${label} fallback AI: ${fb.note}`],
+  };
+}
+
+const scrapeKatalogPromosi = () =>
+  withLlmFallback(scrapeKatalogPromosiRules, KATALOGPROMOSI_URL, "Katalogpromosi");
+const scrapeFoodierate = () => withLlmFallback(scrapeFoodierateRules, FOODIERATE_URL, "Foodierate");
+const scrapeGilaDiskon = () => withLlmFallback(scrapeGilaDiskonRules, GILADISKON_URL, "GilaDiskon");
 
 export const aggregatorsAdapter: ScraperAdapter = {
   name: "aggregators",

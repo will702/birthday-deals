@@ -3,37 +3,43 @@
 :root {
   color-scheme: light;
 
-  /* Warm ivory ground (Anthropic base) */
-  --bg-canvas: #faf9f5;
+  /* Bold Fresh Consumer-Deals Palette */
+  --bg-canvas: #f6f6f3;
   --bg-surface: #ffffff;
-  --bg-subtle: #f0eee6;
-  --ink-primary: #1f1e1b;
-  --ink-secondary: #53514a;
-  --ink-muted: #75716a;
-  --border-hairline: #e8e4db;
-  --border-strong: #d9d3c6;
+  --bg-subtle: #eeeee9;
+  --ink-primary: #111317;
+  --ink-secondary: #4b505b;
+  --ink-muted: #6c727f;
+  --border-hairline: #e4e5e9;
+  --border-strong: #cfd2da;
 
-  /* Clay accent */
-  --accent-primary: #b4552f;
-  --accent-primary-hover: #9a4423;
-  --accent-vivid: #c96442;
-  --accent-soft: #f6e7de;
-  --accent-emerald: #14713f;
-  --accent-amber: #96601a;
+  /* Punchy Vermilion-Coral Brand Accent (passes WCAG AA with white text) */
+  --accent-primary: #e03e1a;
+  --accent-primary-hover: #c23111;
+  --accent-vivid: #ff4f1f;
+  --accent-soft: #fff0eb;
 
-  /* Semantic, tinted warm */
-  --danger-bg: #faeae4;
-  --danger-line: #ecccbf;
-  --danger-ink: #a03123;
-  --success-bg: #e9f2e7;
-  --success-line: #cfe0c8;
-  --info-bg: #e9eff5;
-  --info-line: #ccdae6;
-  --info-ink: #33557a;
-  --warn-bg: #faf3e0;
-  --warn-line: #e8d9b0;
+  /* High-Contrast Semantic Status */
+  --accent-emerald: #047857;
+  --success-bg: #ecfdf5;
+  --success-line: #a7f3d0;
 
-  /* Motion */
+  --accent-amber: #b45309;
+  --warn-bg: #fffbeb;
+  --warn-line: #fde68a;
+
+  --danger-bg: #fff1f2;
+  --danger-line: #fecdd3;
+  --danger-ink: #be123c;
+
+  --info-bg: #eff6ff;
+  --info-line: #bfdbfe;
+  --info-ink: #1d4ed8;
+
+  /* Radius & Motion */
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
@@ -44,9 +50,9 @@
 }
 
 @theme inline {
+  /* UltahID Semantic Tokens */
   --color-background: var(--bg-canvas);
   --color-foreground: var(--ink-primary);
-
   --color-canvas: var(--bg-canvas);
   --color-surface: var(--bg-surface);
   --color-subtle: var(--bg-subtle);
@@ -59,6 +65,7 @@
   --color-accent-hover: var(--accent-primary-hover);
   --color-accent-vivid: var(--accent-vivid);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-foreground: #ffffff;
   --color-emerald: var(--accent-emerald);
   --color-amber: var(--accent-amber);
   --color-danger-bg: var(--danger-bg);
@@ -72,25 +79,45 @@
   --color-warn-bg: var(--warn-bg);
   --color-warn-line: var(--warn-line);
 
-  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-newsreader), ui-serif, Georgia, "Times New Roman", serif;
+  /* Coss / Base UI / shadcn compatibility tokens */
+  --color-popover: var(--bg-surface);
+  --color-popover-foreground: var(--ink-primary);
+  --color-card: var(--bg-surface);
+  --color-card-foreground: var(--ink-primary);
+  --color-primary: var(--accent-primary);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--bg-subtle);
+  --color-secondary-foreground: var(--ink-primary);
+  --color-muted: var(--bg-subtle);
+  --color-muted-foreground: var(--ink-muted);
+  --color-border: var(--border-hairline);
+  --color-input: var(--border-strong);
+  --color-ring: var(--accent-primary);
+  --color-destructive: var(--danger-ink);
+
+  /* Geometric Consumer-Deals Typography */
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
 
-  /* Editorial display scale: tight leading, tighter tracking as it grows */
-  --text-display-xl: clamp(2.625rem, 1.7rem + 3.4vw, 4.25rem);
-  --text-display-xl--line-height: 1.02;
-  --text-display-xl--letter-spacing: -0.032em;
-  --text-display-xl--font-weight: 500;
-  --text-display-lg: clamp(2rem, 1.55rem + 1.9vw, 2.875rem);
-  --text-display-lg--line-height: 1.06;
-  --text-display-lg--letter-spacing: -0.026em;
-  --text-display-lg--font-weight: 500;
-  --text-display-md: clamp(1.625rem, 1.4rem + 1vw, 2.125rem);
-  --text-display-md--line-height: 1.12;
-  --text-display-md--letter-spacing: -0.02em;
-  --text-display-md--font-weight: 500;
+  /* Bold Display Scale */
+  --text-display-xl: clamp(2.25rem, 1.5rem + 2.8vw, 3.5rem);
+  --text-display-xl--line-height: 1.03;
+  --text-display-xl--letter-spacing: -0.035em;
+  --text-display-xl--font-weight: 800;
 
-  /* Micro labels: positive tracking for legibility (Apple) */
+  --text-display-lg: clamp(1.875rem, 1.4rem + 1.6vw, 2.5rem);
+  --text-display-lg--line-height: 1.08;
+  --text-display-lg--letter-spacing: -0.03em;
+  --text-display-lg--font-weight: 800;
+
+  --text-display-md: clamp(1.375rem, 1.15rem + 0.9vw, 1.75rem);
+  --text-display-md--line-height: 1.15;
+  --text-display-md--letter-spacing: -0.025em;
+  --text-display-md--font-weight: 700;
+
+  /* Micro Labels */
   --text-micro: 0.6875rem;
   --text-micro--line-height: 1rem;
   --text-micro--letter-spacing: 0.04em;
@@ -98,6 +125,7 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -110,9 +138,8 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Browser surfaces carry the design: selection, caret */
 ::selection {
-  background-color: #efd8c9;
+  background-color: #ffd9ce;
   color: var(--ink-primary);
 }
 
@@ -122,17 +149,8 @@ select {
   caret-color: var(--accent-primary);
 }
 
-/* Display type: tighter tracking and leading as size grows */
-h1 {
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  text-wrap: balance;
-}
-h2 {
-  letter-spacing: -0.015em;
-  line-height: 1.2;
-  text-wrap: balance;
-}
+h1,
+h2,
 h3 {
   text-wrap: balance;
 }
@@ -144,8 +162,15 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @layer components {
-  /* Instant, tactile press feedback on anything clickable */
   .pressable {
     transition:
       transform var(--dur-press) var(--ease-out),
@@ -159,30 +184,24 @@ p {
     transform: scale(0.97);
   }
 
-  /* Visible keyboard focus, never on mouse click */
   .focus-ring:focus-visible {
     outline: 2px solid var(--accent-primary);
     outline-offset: 2px;
   }
 
-  /* Text inputs / selects (focus state lives outside the layer, see below) */
   .field {
     transition:
       border-color 150ms ease,
       box-shadow 150ms ease;
   }
 
-  /* Translucent chrome: content scrolls underneath (Apple material) */
   .material {
     position: sticky;
-    background-color: rgb(250 249 245 / 0.72);
+    background-color: rgb(246 246 243 / 0.8);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     backdrop-filter: blur(20px) saturate(180%);
   }
 
-  /* Scroll edge effect instead of a hard divider under the header.
-     Progressively enhanced: animates in over the first 240px of scroll
-     where scroll-driven animations are supported, stays clean otherwise. */
   @supports (animation-timeline: --page) {
     .material {
       animation: header-edge linear both;
@@ -191,85 +210,48 @@ p {
     }
   }
 
-  /* Soft layered elevation for cards (warm ink tint) */
   .card-lift {
     transition:
+      transform var(--dur-ui) var(--ease-out),
       box-shadow var(--dur-ui) ease,
       border-color var(--dur-ui) ease;
   }
   @media (hover: hover) and (pointer: fine) {
     .card-lift:hover {
+      transform: translateY(-2px);
       border-color: var(--border-strong);
       box-shadow:
-        0 1px 2px rgb(31 30 27 / 0.04),
-        0 4px 12px rgb(31 30 27 / 0.05),
-        0 12px 24px -8px rgb(31 30 27 / 0.06);
+        0 1px 2px rgb(17 19 23 / 0.04),
+        0 6px 16px rgb(17 19 23 / 0.06),
+        0 14px 28px -8px rgb(17 19 23 / 0.07);
     }
   }
 
-  /* Entrance: fade + small rise. Stagger via --i, capped at 8 */
   .reveal {
-    animation: reveal 280ms var(--ease-out) both;
-    animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+    animation: reveal 260ms var(--ease-out) both;
+    animation-delay: calc(min(var(--i, 0), 8) * 35ms);
   }
 
-  /* Collapsible region: height via grid rows, no layout thrash on content */
-  .collapsible {
-    display: grid;
-    grid-template-rows: 0fr;
-    opacity: 0;
-    transition:
-      grid-template-rows 180ms var(--ease-out),
-      opacity 150ms ease;
-  }
-  .collapsible[data-open="true"] {
-    grid-template-rows: 1fr;
-    opacity: 1;
-    transition:
-      grid-template-rows 240ms var(--ease-out),
-      opacity 200ms ease 40ms;
-  }
-  .collapsible > * {
-    min-height: 0;
-    overflow: hidden;
+  .bento-dots {
+    background-image: radial-gradient(rgb(255 255 255 / 0.14) 1px, transparent 1px);
+    background-size: 16px 16px;
   }
 
-  /* Lightbox: scrim fades, image scales from its thumbnail (origin set inline) */
-  .lightbox-scrim {
-    animation: fade-in 200ms ease both;
-  }
-  .lightbox-scrim[data-closing="true"] {
-    animation: fade-out 140ms ease both;
-  }
-  .lightbox-panel {
-    animation: pop-in 240ms var(--ease-out) both;
-  }
-  .lightbox-scrim[data-closing="true"] .lightbox-panel {
-    animation: pop-out 140ms var(--ease-out) both;
-  }
-
-  /* Skeleton shimmer, calmer than animate-pulse */
   .skeleton {
     background: linear-gradient(
       100deg,
-      rgb(232 228 219 / 0.5) 30%,
-      rgb(240 238 230 / 0.9) 50%,
-      rgb(232 228 219 / 0.5) 70%
+      rgb(228 229 233 / 0.55) 30%,
+      rgb(238 238 233 / 0.95) 50%,
+      rgb(228 229 233 / 0.55) 70%
     );
     background-size: 200% 100%;
     animation: shimmer 1.4s linear infinite;
   }
 }
 
-/*
- * Field focus is unlayered on purpose: Tailwind utilities (border-line-strong)
- * live in the `utilities` layer and would otherwise beat a layered rule.
- * Uses :focus (not :focus-visible) so mouse-clicked selects also show state;
- * the transparent outline keeps a visible indicator in forced-colors mode.
- */
 .field:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 26%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 20%, transparent);
   outline: 2px solid transparent;
   outline-offset: 0;
 }
@@ -285,23 +267,6 @@ p {
     opacity: 0;
   }
 }
-@keyframes fade-out {
-  to {
-    opacity: 0;
-  }
-}
-@keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-}
-@keyframes pop-out {
-  to {
-    opacity: 0;
-    transform: scale(0.98);
-  }
-}
 @keyframes shimmer {
   to {
     background-position: -200% 0;
@@ -310,27 +275,22 @@ p {
 @keyframes header-edge {
   to {
     box-shadow:
-      0 1px 0 rgb(31 30 27 / 0.07),
-      0 10px 28px -18px rgb(31 30 27 / 0.22);
+      0 1px 0 rgb(17 19 23 / 0.07),
+      0 10px 28px -18px rgb(17 19 23 / 0.18);
   }
 }
 
-/* Reduced motion: keep gentle fades, drop movement */
 @media (prefers-reduced-motion: reduce) {
-  .pressable:active:not(:disabled) {
+  html {
+    scroll-behavior: auto;
+  }
+  .pressable:active:not(:disabled),
+  .card-lift:hover {
     transform: none;
   }
   .reveal {
     animation: fade-in 150ms ease both;
     animation-delay: 0ms;
-  }
-  .collapsible,
-  .collapsible[data-open="true"] {
-    transition: opacity 150ms ease;
-  }
-  .lightbox-panel,
-  .lightbox-scrim[data-closing="true"] .lightbox-panel {
-    animation: fade-in 150ms ease both;
   }
   .skeleton,
   .animate-pulse {
@@ -341,7 +301,6 @@ p {
   }
 }
 
-/* Reduced transparency: frosted becomes solid */
 @media (prefers-reduced-transparency: reduce) {
   .material {
     background-color: var(--bg-canvas);
@@ -350,11 +309,10 @@ p {
   }
 }
 
-/* Higher contrast: stronger borders */
 @media (prefers-contrast: more) {
   :root {
     --border-hairline: var(--border-strong);
-    --ink-secondary: #3f3c35;
-    --ink-muted: #53514a;
+    --ink-secondary: #2d3139;
+    --ink-muted: #4b505b;
   }
 }

@@ -8,29 +8,32 @@ import { parseTermsJson } from "@/lib/validation";
 function DirectorySkeleton() {
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <div className="pt-10 sm:pt-14 pb-8 max-w-3xl space-y-4">
-        <div className="h-12 w-[22rem] max-w-full rounded-lg skeleton" />
-        <div className="h-4 w-2/3 rounded-md skeleton" />
-        <div className="h-4 w-1/2 rounded-md skeleton" />
+      <div className="pt-6 sm:pt-8 pb-5 grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-7 h-64 rounded-3xl skeleton" />
+        <div className="lg:col-span-5 h-64 rounded-3xl skeleton" />
       </div>
-      <div className="border-y border-hairline py-4 space-y-3">
-        <div className="h-10 w-full rounded-lg skeleton" />
-        <div className="h-8 w-2/3 rounded-full skeleton" />
+      <div className="pb-4 flex gap-2 overflow-hidden">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-9 w-28 shrink-0 rounded-2xl skeleton" />
+        ))}
+      </div>
+      <div className="border-y border-hairline py-2.5">
+        <div className="h-10 w-full rounded-xl skeleton" />
       </div>
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, idx) => (
           <div
             key={idx}
-            className="h-[22rem] rounded-2xl border border-hairline bg-surface p-5 space-y-3"
+            className="h-[19rem] rounded-2xl border border-hairline bg-surface p-5 space-y-3"
           >
             <div className="flex justify-between">
-              <div className="h-4 w-28 rounded-md skeleton" />
-              <div className="h-4 w-20 rounded-md skeleton" />
+              <div className="h-9 w-36 rounded-xl skeleton" />
+              <div className="h-5 w-20 rounded-full skeleton" />
             </div>
-            <div className="h-10 w-24 rounded-md skeleton" />
+            <div className="h-10 w-24 rounded-lg skeleton" />
             <div className="h-4 w-4/5 rounded-md skeleton" />
             <div className="h-4 w-3/5 rounded-md skeleton" />
-            <div className="h-12 w-full rounded-md skeleton" />
+            <div className="h-12 w-full rounded-xl skeleton" />
           </div>
         ))}
       </div>

@@ -1,14 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Link2, Upload, X } from "lucide-react";
+import { CheckCircle2, Circle, Link2 } from "lucide-react";
+import { toast } from "sonner";
 import { DEAL_CATEGORIES, DISCOUNT_TYPES } from "@/lib/validation";
 import type { DealSummaryDto } from "@/lib/deal-types";
 import { DealCard } from "./DealCard";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { FieldLabel, Input, Select, Textarea } from "@/components/ui/Field";
+import { FieldLabel, Input, Textarea } from "@/components/ui/Field";
+import { FileUploadDropzone } from "@/components/ui/FileUploadDropzone";
+import { SelectMenu } from "@/components/ui/SelectMenu";
+import { Switch } from "@/components/ui/Switch";
+import { cn } from "@/lib/utils";
+
+const PREVIEW_EPOCH_ISO = "2026-01-01T00:00:00.000Z";
+
+const CATEGORY_OPTIONS = DEAL_CATEGORIES.map((c) => ({ value: c, label: c }));
+
+const DISCOUNT_TYPE_OPTIONS: Array<{
+  value: (typeof DISCOUNT_TYPES)[number];
+  label: string;
+}> = [
+  { value: "FREE_100", label: "100% Gratis (Free Item)" },
+  { value: "DISCOUNT_PERCENT", label: "Diskon Persentase (%)" },
+  { value: "BOGO", label: "Beli 1 Gratis 1 (BOGO)" },
+  { value: "FREE_ITEM_WITH_PURCHASE", label: "Gratis dgn Min. Order" },
+  { value: "VOUCHER", label: "Voucher Potongan" },
+];
 
 interface LinkPreview {
   title: string | null;
@@ -34,16 +54,21 @@ function SectionStep({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-hairline bg-surface p-5 sm:p-6 space-y-5 ${className}`}
+      className={cn(
+        "rounded-3xl border border-hairline bg-surface p-5 sm:p-6 space-y-5",
+        className,
+      )}
     >
       <div className="flex flex-wrap items-center gap-3">
         <span
           aria-hidden="true"
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink font-mono text-xs font-semibold text-white"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-ink font-mono text-xs font-bold text-white"
         >
           {step}
         </span>
-        <h2 className="font-serif text-xl tracking-tight text-ink">{title}</h2>
+        <h2 className="font-display text-lg sm:text-xl font-bold tracking-tight text-ink">
+          {title}
+        </h2>
         {required ? <Badge tone="clay">Wajib</Badge> : null}
       </div>
       {children}
@@ -60,7 +85,7 @@ export function SubmitDealForm() {
   const [discountValue, setDiscountValue] = useState<string>("100");
   const [description, setDescription] = useState("");
   const [termsText, setTermsText] = useState(
-    "Wajib menunjukkan KTP/SIM asli\nBerlaku untuk 1x klaim di hari ulang tahun"
+    "Wajib menunjukkan KTP/SIM asli\nBerlaku untuk 1x klaim di hari ulang tahun",
   );
   const [claimWindow, setClaimWindow] = useState("H-7 s/d H+7");
   const [requiresApp, setRequiresApp] = useState(false);
@@ -80,22 +105,19 @@ export function SubmitDealForm() {
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
-  // Prerender-safe clock for the live preview: a fixed epoch at SSR, real time after mount.
-  const [previewNowIso, setPreviewNowIso] = useState("2026-01-01T00:00:00.000Z");
-  useEffect(() => {
-    setPreviewNowIso(new Date().toISOString());
-  }, []);
 
   async function handleImageUpload(file: File | undefined) {
-    if (uploading) return;
-    if (!file) return;
+    if (uploading || !file) return;
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      setError("Format gambar tidak didukung. Gunakan JPG, PNG, atau WebP.");
+      const msg = "Format gambar tidak didukung. Gunakan JPG, PNG, atau WebP.";
+      setError(msg);
+      toast.error(msg);
       return;
     }
     if (file.size > 4 * 1024 * 1024) {
-      setError("Ukuran gambar terlalu besar. Maksimal 4MB.");
+      const msg = "Ukuran gambar terlalu besar. Maksimal 4MB.";
+      setError(msg);
+      toast.error(msg);
       return;
     }
     setUploading(true);
@@ -110,8 +132,11 @@ export function SubmitDealForm() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Upload gambar gagal.");
       setProofImageUrl(json.url);
+      toast.success("Gambar bukti berhasil diunggah.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload gagal.");
+      const msg = err instanceof Error ? err.message : "Upload gagal.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setUploading(false);
     }
@@ -128,7 +153,14 @@ export function SubmitDealForm() {
         body: JSON.stringify({ url: proofLinkUrl.trim() }),
       });
       const json = await res.json();
-      if (res.ok) setLinkPreview(json);
+      if (res.ok) {
+        setLinkPreview(json);
+        if (json.accessible) {
+          toast.success("Tautan berhasil diverifikasi.");
+        }
+      }
+    } catch {
+      toast.error("Gagal mengecek pratinjau tautan.");
     } finally {
       setCheckingLink(false);
     }
@@ -139,9 +171,10 @@ export function SubmitDealForm() {
     setError(null);
 
     if (!proofImageUrl && !proofLinkUrl.trim()) {
-      setError(
-        "Bukti wajib diisi: unggah foto struk/screenshot voucher ATAU tempel tautan sumber resmi/media sosial."
-      );
+      const msg =
+        "Bukti wajib diisi: unggah foto struk/screenshot voucher ATAU tempel tautan sumber resmi/media sosial.";
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -151,7 +184,9 @@ export function SubmitDealForm() {
       .filter((s) => s.length >= 2);
 
     if (termsList.length === 0) {
-      setError("Isi minimal 1 baris syarat & ketentuan.");
+      const msg = "Isi minimal 1 baris syarat & ketentuan.";
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -194,16 +229,28 @@ export function SubmitDealForm() {
         throw new Error(json.error || "Gagal menyimpan promo baru.");
       }
 
+      toast.success("Temuan promo berhasil dipublikasikan!");
       router.push(`/deals/${json.deal.slug}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
+      const msg = err instanceof Error ? err.message : "Terjadi kesalahan.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
   }
 
-  // Live preview: the real card, fed by the form's current state.
+  const step1Ready =
+    brandName.trim().length >= 2 &&
+    title.trim().length >= 4 &&
+    description.trim().length >= 10;
+  const step2Ready =
+    claimWindow.trim().length >= 2 &&
+    termsText.trim().length >= 2 &&
+    (!requiresApp || appName.trim().length > 0);
+  const step3Ready = Boolean(proofImageUrl || proofLinkUrl.trim().length > 0);
+
   const previewDeal: DealSummaryDto = {
     id: "preview",
     slug: "preview",
@@ -230,22 +277,22 @@ export function SubmitDealForm() {
     sourceUrl: null,
     sourceType: "COMMUNITY",
     verificationStatus: "COMMUNITY_SUBMITTED",
-    validYear: new Date(previewNowIso).getFullYear(),
+    validYear: new Date(PREVIEW_EPOCH_ISO).getFullYear(),
     stillWorksCount: 1,
     expiredReportCount: 0,
     freshnessScore: 100,
     lastScrapedAt: null,
-    lastVerifiedAt: previewNowIso,
-    createdAt: previewNowIso,
+    lastVerifiedAt: PREVIEW_EPOCH_ISO,
+    createdAt: PREVIEW_EPOCH_ISO,
     proofCount: proofImageUrl || proofLinkUrl ? 1 : 0,
     verificationCount: 0,
     latestProofImageUrl: proofImageUrl,
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 space-y-5">
-        {/* Section 1: Identitas Promo */}
+    <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="lg:col-span-8 space-y-5">
+        {/* Section 1 */}
         <SectionStep step={1} title="Informasi Brand & Diskon">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -266,18 +313,15 @@ export function SubmitDealForm() {
               <FieldLabel htmlFor="category" required>
                 Kategori
               </FieldLabel>
-              <Select
-                id="category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value as (typeof DEAL_CATEGORIES)[number])}
-                className="mt-1.5"
-              >
-                {DEAL_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </Select>
+              <div className="mt-1.5">
+                <SelectMenu
+                  id="category"
+                  aria-label="Kategori promo"
+                  value={category}
+                  onValueChange={(v) => setCategory(v)}
+                  options={CATEGORY_OPTIONS}
+                />
+              </div>
             </div>
           </div>
 
@@ -300,23 +344,19 @@ export function SubmitDealForm() {
               <FieldLabel htmlFor="discountType" required>
                 Jenis Potongan
               </FieldLabel>
-              <Select
-                id="discountType"
-                value={discountType}
-                onChange={(e) => {
-                  const next = e.target.value as (typeof DISCOUNT_TYPES)[number];
-                  setDiscountType(next);
-                  if (next === "FREE_100") setDiscountValue("100");
-                  else if (next === "BOGO") setDiscountValue("50");
-                }}
-                className="mt-1.5"
-              >
-                <option value="FREE_100">100% Gratis (Free Item)</option>
-                <option value="DISCOUNT_PERCENT">Diskon Persentase (%)</option>
-                <option value="BOGO">Beli 1 Gratis 1 (BOGO)</option>
-                <option value="FREE_ITEM_WITH_PURCHASE">Gratis dgn Min. Order</option>
-                <option value="VOUCHER">Voucher Potongan</option>
-              </Select>
+              <div className="mt-1.5">
+                <SelectMenu
+                  id="discountType"
+                  aria-label="Jenis potongan"
+                  value={discountType}
+                  onValueChange={(next) => {
+                    setDiscountType(next);
+                    if (next === "FREE_100") setDiscountValue("100");
+                    else if (next === "BOGO") setDiscountValue("50");
+                  }}
+                  options={DISCOUNT_TYPE_OPTIONS}
+                />
+              </div>
             </div>
 
             <div>
@@ -364,7 +404,7 @@ export function SubmitDealForm() {
           </div>
         </SectionStep>
 
-        {/* Section 2: Syarat & Periode Klaim */}
+        {/* Section 2 */}
         <SectionStep step={2} title="Syarat & Periode Klaim">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -392,30 +432,34 @@ export function SubmitDealForm() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-6">
-            <label className="inline-flex items-center gap-2 text-sm font-medium text-ink cursor-pointer">
-              <input
-                type="checkbox"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-hairline bg-canvas p-3.5">
+              <div>
+                <div className="text-xs font-bold text-ink">Wajib Tunjukkan KTP</div>
+                <div className="text-[11px] text-ink-muted">KTP / SIM / Paspor asli di kasir</div>
+              </div>
+              <Switch
+                aria-label="Wajib Tunjukkan KTP / SIM / Paspor"
                 checked={requiresIdCard}
-                onChange={(e) => setRequiresIdCard(e.target.checked)}
-                className="h-4 w-4 rounded-md border-line-strong accent-accent"
+                onCheckedChange={setRequiresIdCard}
               />
-              Wajib Tunjukkan KTP / SIM / Paspor
-            </label>
+            </div>
 
-            <label className="inline-flex items-center gap-2 text-sm font-medium text-ink cursor-pointer">
-              <input
-                type="checkbox"
+            <div className="flex items-center justify-between gap-3 rounded-2xl border border-hairline bg-canvas p-3.5">
+              <div>
+                <div className="text-xs font-bold text-ink">Wajib Daftar Aplikasi</div>
+                <div className="text-[11px] text-ink-muted">Harus jadi member aplikasi brand</div>
+              </div>
+              <Switch
+                aria-label="Wajib Daftar Aplikasi Member"
                 checked={requiresApp}
-                onChange={(e) => setRequiresApp(e.target.checked)}
-                className="h-4 w-4 rounded-md border-line-strong accent-accent"
+                onCheckedChange={setRequiresApp}
               />
-              Wajib Daftar Aplikasi Member
-            </label>
+            </div>
           </div>
 
           {requiresApp && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl bg-canvas p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-2xl border border-warn-line bg-warn-bg/60 p-4">
               <div>
                 <FieldLabel htmlFor="appName" required>
                   Nama Aplikasi
@@ -460,12 +504,12 @@ export function SubmitDealForm() {
           </div>
         </SectionStep>
 
-        {/* Section 3: MANDATORY PROOF */}
+        {/* Section 3: Mandatory Proof */}
         <SectionStep
           step={3}
           title="Lampirkan Bukti Asli"
           required
-          className="border-accent-vivid/45"
+          className="border-accent/35"
         >
           <p className="-mt-2 text-sm leading-relaxed text-ink-2">
             Salah satu atau keduanya: agar direktori bebas dari info palsu,
@@ -498,7 +542,7 @@ export function SubmitDealForm() {
             </div>
 
             {linkPreview && (
-              <div className="reveal rounded-xl bg-canvas p-3.5 text-xs">
+              <div className="reveal rounded-2xl border border-hairline bg-canvas p-3.5 text-xs">
                 {linkPreview.accessible ? (
                   <div className="space-y-1">
                     <p className="font-bold text-emerald">
@@ -522,66 +566,15 @@ export function SubmitDealForm() {
 
           <div className="space-y-2">
             <span className="flex items-baseline gap-1 text-xs font-semibold text-ink">
-              Upload Screenshot Voucher / Foto Struk (JPG, PNG, WebP maks 4MB)
+              Upload Screenshot Voucher / Foto Struk
             </span>
-            <div className="flex flex-wrap items-center gap-3">
-              <label
-                data-dragover={dragOver ? "true" : undefined}
-                onDragEnter={(e) => {
-                  e.preventDefault();
-                  setDragOver(true);
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = "copy";
-                  setDragOver(true);
-                }}
-                onDragLeave={(e) => {
-                  e.preventDefault();
-                  if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-                  setDragOver(false);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  handleImageUpload(e.dataTransfer.files?.[0]);
-                }}
-                className="pressable inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-line-strong bg-canvas px-4 py-3 text-xs font-semibold text-ink hover:border-accent data-[dragover=true]:border-accent data-[dragover=true]:bg-accent-soft/40 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent"
-              >
-                <Upload className="h-4 w-4 text-accent" aria-hidden="true" />
-                {uploading ? "Mengunggah gambar..." : "Pilih atau Taruh Gambar Bukti"}
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="sr-only"
-                  onChange={(e) => handleImageUpload(e.target.files?.[0])}
-                />
-              </label>
-
-              {proofImageUrl && (
-                <div className="reveal rounded-lg border border-success-line bg-success-bg p-1.5 flex items-center gap-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={proofImageUrl}
-                    alt="Preview bukti"
-                    className="h-14 w-14 rounded-md object-cover"
-                  />
-                  <div className="text-xs pr-2">
-                    <div className="font-semibold text-emerald flex items-center gap-1">
-                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      Terunggah
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setProofImageUrl(null)}
-                      className="pressable focus-ring rounded-md text-[11px] text-accent hover:underline mt-0.5 inline-flex items-center gap-0.5"
-                    >
-                      <X className="h-3 w-3" /> Hapus
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <FileUploadDropzone
+              id="submit-proof-upload"
+              imageUrl={proofImageUrl}
+              uploading={uploading}
+              onFileSelect={handleImageUpload}
+              onRemove={() => setProofImageUrl(null)}
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -624,7 +617,7 @@ export function SubmitDealForm() {
         {error && (
           <div
             role="alert"
-            className="reveal rounded-xl border border-danger-line bg-danger-bg p-3.5 text-sm font-medium text-danger-ink"
+            className="reveal rounded-2xl border border-danger-line bg-danger-bg p-3.5 text-sm font-medium text-danger-ink"
           >
             {error}
           </div>
@@ -637,27 +630,51 @@ export function SubmitDealForm() {
         </div>
       </div>
 
-      {/* Sidebar: live preview (the real card) + proof standard */}
-      <aside className="space-y-4 lg:sticky lg:top-24 self-start">
-        <div className="space-y-3">
-          <h3 className="text-micro font-semibold uppercase text-ink-muted">
-            Pratinjau Kartu Promo
-          </h3>
-          <DealCard deal={previewDeal} nowIso={previewNowIso} preview />
+      {/* Sidebar: Readiness + Live Voucher Card Preview */}
+      <aside className="lg:col-span-4 space-y-4 lg:sticky lg:top-24">
+        <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-2.5">
+          <div className="text-micro font-bold uppercase text-ink-muted">
+            Kesiapan Pengiriman
+          </div>
+          <ul className="space-y-1.5 text-xs">
+            {[
+              { done: step1Ready, label: "1. Brand, judul & cara klaim" },
+              { done: step2Ready, label: "2. Periode & syarat klaim" },
+              { done: step3Ready, label: "3. Foto struk atau link bukti" },
+            ].map((item) => (
+              <li
+                key={item.label}
+                className={cn(
+                  "flex items-center gap-2 font-medium",
+                  item.done ? "text-emerald" : "text-ink-muted",
+                )}
+              >
+                {item.done ? (
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                ) : (
+                  <Circle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                )}
+                <span>{item.label}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <div className="rounded-2xl bg-subtle/60 p-5 space-y-2.5 text-xs leading-relaxed text-ink-2">
-          <h3 className="font-serif text-base tracking-tight text-ink">
-            Kenapa wajib bukti?
+        <div className="space-y-2.5">
+          <h3 className="text-micro font-bold uppercase text-ink-muted">
+            Pratinjau Kartu Promo
+          </h3>
+          <DealCard deal={previewDeal} nowIso={PREVIEW_EPOCH_ISO} preview />
+        </div>
+
+        <div className="rounded-2xl border border-hairline bg-subtle/60 p-4 space-y-2 text-xs leading-relaxed text-ink-2">
+          <h3 className="font-display text-sm font-bold text-ink">
+            Kenapa wajib melampirkan bukti?
           </h3>
           <p>
             Banyak daftar promo ulang tahun di internet yang sudah kedaluwarsa
-            atau diam-diam berubah syarat minimum belanjanya.
-          </p>
-          <p>
-            Dengan melampirkan foto struk, screenshot voucher di aplikasi, atau
-            link pengumuman resmi, status promo terjamin valid dan bisa
-            dikonfirmasi ulang oleh pengguna lain.
+            atau diam-diam berubah syarat minimum belanjanya. Dengan bukti nyata,
+            status promo tetap tepercaya.
           </p>
         </div>
       </aside>

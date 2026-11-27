@@ -5,7 +5,7 @@ import {
   type ExtractedDeal,
 } from "./schema";
 
-export const DEFAULT_AI_MODEL = "anthropic/claude-haiku-5-5";
+export const DEFAULT_AI_MODEL = "google/gemini-2.5-flash";
 const MAX_INPUT_CHARS = 30_000;
 
 export function getScraperModel(): string {

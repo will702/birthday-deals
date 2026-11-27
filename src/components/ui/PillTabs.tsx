@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { cn } from "@/lib/utils";
 
 export interface PillTabOption<T extends string = string> {
   value: T;
@@ -18,8 +19,7 @@ interface PillTabsProps<T extends string> {
 }
 
 /**
- * Segmented quick-filter pills with a spring-sliding active indicator
- * (Apple-style: interruptible, starts from the live position via layoutId).
+ * Segmented quick-filter pills with an interruptible spring-sliding active pill.
  */
 export function PillTabs<T extends string>({
   options,
@@ -35,7 +35,10 @@ export function PillTabs<T extends string>({
     <div
       role="group"
       aria-label={aria["aria-label"]}
-      className={`flex items-center gap-1 overflow-x-auto rounded-full border border-hairline bg-surface p-1 shadow-[0_1px_2px_rgb(31_30_27/0.03)] max-sm:[mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)] ${className}`}
+      className={cn(
+        "no-scrollbar flex items-center gap-1 overflow-x-auto rounded-full border border-hairline bg-surface p-1 shadow-[0_1px_2px_rgb(17_19_23/0.03)] max-sm:[mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)]",
+        className,
+      )}
     >
       {options.map((option) => {
         const active = option.value === value;
@@ -45,9 +48,10 @@ export function PillTabs<T extends string>({
             type="button"
             aria-pressed={active}
             onClick={() => onChange(option.value)}
-            className={`relative shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap pressable focus-ring ${
-              active ? "text-white" : "text-ink-2 hover:text-ink"
-            }`}
+            className={cn(
+              "relative shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap pressable focus-ring cursor-pointer",
+              active ? "text-white" : "text-ink-2 hover:text-ink",
+            )}
           >
             {active && (
               <motion.span
@@ -56,7 +60,7 @@ export function PillTabs<T extends string>({
                 transition={
                   reduceMotion
                     ? { duration: 0 }
-                    : { type: "spring", bounce: 0, duration: 0.4 }
+                    : { type: "spring", bounce: 0, duration: 0.36 }
                 }
               />
             )}
@@ -64,9 +68,10 @@ export function PillTabs<T extends string>({
               {option.label}
               {option.count !== undefined && (
                 <span
-                  className={`font-mono text-[10px] tabular-nums ${
-                    active ? "text-white/70" : "text-ink-muted"
-                  }`}
+                  className={cn(
+                    "font-mono text-[10px] tabular-nums",
+                    active ? "text-white/75" : "text-ink-muted",
+                  )}
                 >
                   {option.count}
                 </span>

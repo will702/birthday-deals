@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -11,8 +12,29 @@ const runRequestSchema = z
   })
   .optional();
 
+// Scraping many pages can take minutes; the Vercel function must be allowed to run that long.
+export const maxDuration = 300;
+
+/**
+ * Vercel Schedules cannot send custom headers, but send `Authorization: Bearer <CRON_SECRET>`
+ * when CRON_SECRET is set. Fail-closed: unset/empty CRON_SECRET never authorizes.
+ */
+function isCronAuthorized(req: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  const provided = req.headers.get("authorization");
+  if (!provided) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(`Bearer ${secret}`);
+  if (a.length !== b.length) {
+    crypto.timingSafeEqual(b, b);
+    return false;
+  }
+  return crypto.timingSafeEqual(a, b);
+}
+
 export async function POST(req: Request) {
-  if (!isAdminAuthorized(req)) {
+  if (!isAdminAuthorized(req) && !isCronAuthorized(req)) {
     return NextResponse.json({ error: "Admin token tidak valid." }, { status: 401 });
   }
 

@@ -1,64 +1,52 @@
+import { parseCities } from "../lib/cities";
 import { prisma } from "../lib/prisma";
+import { embedDeals } from "../lib/recommend/embeddings";
 import { agenticAdapter, createAgenticAdapter, type AgenticOptions } from "./adapters/agentic";
+import { isAiAvailable } from "./agent/page-extract";
 import { aggregatorsAdapter } from "./adapters/aggregators";
+import { blogsAdapter } from "./adapters/blogs";
+import { brandsExtendedAdapter } from "./adapters/brands-extended";
 import { officialBrandsAdapter } from "./adapters/official-brands";
 import { searchDiscoveryAdapter } from "./adapters/search-discovery";
+import { socialPublicAdapter } from "./adapters/social-public";
+import { getFirecrawlUsage, resetFirecrawlBudget } from "./firecrawl";
 import { runFreshnessChecker, type FreshnessSummary } from "./freshness-checker";
 import { closeBrowser } from "./browser";
-import { normalizeScrapedDeal } from "./normalizer";
+import { dedupeBatch, findDuplicate, titlesSimilar } from "./dedupe";
+import { normalizeScrapedDeal, rejectionReason } from "./normalizer";
 import type { AdapterResult, ScraperAdapter } from "./types";
 
-const ADAPTER_MAP: Record<string, ScraperAdapter> = {
+export const ADAPTER_MAP: Record<string, ScraperAdapter> = {
   "official-brands": officialBrandsAdapter,
   aggregators: aggregatorsAdapter,
   "search-discovery": searchDiscoveryAdapter,
   agentic: agenticAdapter,
+  "brands-extended": brandsExtendedAdapter,
+  blogs: blogsAdapter,
+  "social-public": socialPublicAdapter,
 };
 
 /** Adapters that only run when explicitly selected (cost money / need credentials). */
-const OPT_IN_ADAPTERS = new Set(["agentic"]);
+const OPT_IN_ADAPTERS = new Set(["agentic", "brands-extended", "blogs", "social-public"]);
 
-function brandRootKey(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\bindonesia\b|\bgroup\b|\bboga\b|\bresto\b|\bcoffee\b|\bjuice\b/g, "")
-    .replace(/[^a-z0-9]+/g, "")
-    .trim();
-}
+/** Opt-in adapters that join the default run automatically when an LLM is configured. */
+const AUTO_WITH_AI = new Set(["brands-extended", "blogs"]);
 
-const STOPWORDS = new Set([
-  "promo",
-  "gratis",
-  "free",
-  "ulang",
-  "tahun",
-  "birthday",
-  "dan",
-  "di",
-  "yang",
-  "untuk",
-  "dengan",
-]);
-
-function titleTokens(title: string): Set<string> {
-  return new Set(
-    title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .split(" ")
-      .filter((t) => t.length >= 3 && !STOPWORDS.has(t)),
+/** Adapter keys used when no `sources` are selected. social-public and agentic stay explicit. */
+export function defaultAdapterKeys(): string[] {
+  const withAi = isAiAvailable();
+  return Object.keys(ADAPTER_MAP).filter(
+    (k) => !OPT_IN_ADAPTERS.has(k) || (withAi && AUTO_WITH_AI.has(k)),
   );
 }
 
-/** Token-overlap (Jaccard) check so a brand-root match only merges near-identical titles. */
-export function titlesSimilar(a: string, b: string, threshold = 0.5): boolean {
-  const ta = titleTokens(a);
-  const tb = titleTokens(b);
-  if (ta.size === 0 || tb.size === 0) return a.trim().toLowerCase() === b.trim().toLowerCase();
-  let overlap = 0;
-  for (const t of ta) if (tb.has(t)) overlap += 1;
-  return overlap / (ta.size + tb.size - overlap) >= threshold;
+export function resolveAdapterKeys(sources?: string[]): string[] {
+  return sources && sources.length > 0
+    ? sources.filter((k) => Boolean(ADAPTER_MAP[k]))
+    : defaultAdapterKeys();
 }
+
+export { titlesSimilar };
 
 export const RUN_LOCK_WINDOW_MS = 15 * 60 * 1000;
 
@@ -122,10 +110,8 @@ async function executePipeline(options?: {
   /** Overrides for the opt-in agentic adapter (CLI --query / --seeds). */
   agent?: AgenticOptions;
 }): Promise<ScraperRunOutput> {
-  const selectedKeys =
-    options?.sources && options.sources.length > 0
-      ? options.sources.filter((k) => Boolean(ADAPTER_MAP[k]))
-      : Object.keys(ADAPTER_MAP).filter((k) => !OPT_IN_ADAPTERS.has(k));
+  const selectedKeys = resolveAdapterKeys(options?.sources);
+  resetFirecrawlBudget();
 
   const runResults: ScraperRunOutput["runs"] = [];
   const existingDeals = await prisma.deal.findMany({
@@ -136,18 +122,13 @@ async function executePipeline(options?: {
       title: true,
       verificationStatus: true,
       sourceType: true,
+      discountType: true,
+      discountValue: true,
     },
   });
 
   const existingBySlug = new Map(existingDeals.map((d) => [d.slug, d]));
-  const existingByBrandRoot = new Map<string, Array<(typeof existingDeals)[number]>>();
-  const addToBrandRoot = (key: string, d: (typeof existingDeals)[number]) => {
-    if (key.length < 4) return;
-    const list = existingByBrandRoot.get(key);
-    if (list) list.push(d);
-    else existingByBrandRoot.set(key, [d]);
-  };
-  for (const d of existingDeals) addToBrandRoot(brandRootKey(d.brandName), d);
+  const dupePool: Array<(typeof existingDeals)[number]> = [...existingDeals];
 
   for (const key of selectedKeys) {
     const adapter =
@@ -164,6 +145,10 @@ async function executePipeline(options?: {
     let result: AdapterResult;
     try {
       result = await adapter.run();
+      const fc = getFirecrawlUsage();
+      if (fc.calls > 0) {
+        result.notes = [...(result.notes ?? []), `Firecrawl: ${fc.creditsUsed}/${fc.maxCredits} kredit (kumulatif run).`];
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Adapter crashed";
       await prisma.scrapeRun.update({
@@ -189,22 +174,58 @@ async function executePipeline(options?: {
 
     let created = 0;
     let updated = 0;
+    const touchedIds = new Set<string>();
 
     let failed = 0;
     const failureMessages: string[] = [];
 
+    // Deterministic filters (zodiac / brand anniversary) and in-batch dedupe before saving.
+    const rejected = new Map<string, number>();
+    const candidates: Array<{
+      raw: (typeof result.deals)[number];
+      normalized: ReturnType<typeof normalizeScrapedDeal>;
+    }> = [];
     for (const raw of result.deals) {
+      const reason = rejectionReason(raw);
+      if (reason) {
+        rejected.set(reason, (rejected.get(reason) ?? 0) + 1);
+        continue;
+      }
       try {
-        const normalized = normalizeScrapedDeal(raw);
-        const rootKey = brandRootKey(normalized.brandName);
+        candidates.push({ raw, normalized: normalizeScrapedDeal(raw) });
+      } catch (err) {
+        failed += 1;
+        if (failureMessages.length < 3) {
+          failureMessages.push(
+            `${raw.title.slice(0, 40)}: ${err instanceof Error ? err.message.slice(0, 120) : "error"}`,
+          );
+        }
+      }
+    }
+    const batch = dedupeBatch(
+      candidates.map((c) => ({
+        ...c,
+        brandName: c.normalized.brandName,
+        title: c.normalized.title,
+        discountType: c.normalized.discountType,
+        discountValue: c.normalized.discountValue,
+        sourceType: c.normalized.sourceType,
+        description: c.normalized.description,
+      })),
+    );
+    const filterNotes: string[] = [];
+    if (rejected.size > 0) {
+      filterNotes.push(
+        `Ditolak: ${[...rejected].map(([reason, n]) => `${n} ${reason}`).join(", ")}.`,
+      );
+    }
+    if (batch.dropped > 0) filterNotes.push(`${batch.dropped} duplikat dalam batch digabung.`);
+    if (filterNotes.length > 0) result.notes = [...filterNotes, ...(result.notes ?? [])];
 
+    for (const { raw, normalized } of batch.kept) {
+      try {
         const matched =
-          existingBySlug.get(normalized.slug) ??
-          (rootKey.length >= 4
-            ? existingByBrandRoot
-                .get(rootKey)
-                ?.find((d) => titlesSimilar(d.title, normalized.title))
-            : undefined);
+          existingBySlug.get(normalized.slug) ?? findDuplicate(normalized, dupePool);
 
         const now = new Date();
 
@@ -213,6 +234,8 @@ async function executePipeline(options?: {
           const shouldPreserveAuthoritative =
             matched.verificationStatus === "ADMIN_VERIFIED" ||
             matched.verificationStatus === "COMMUNITY_SUBMITTED" ||
+            // Low-trust sources (public social posts) never overwrite an existing record.
+            raw.lowTrust === true ||
             (matched.sourceType === "SCRAPER_BRAND" && normalized.sourceType !== "SCRAPER_BRAND") ||
             (matched.sourceType === "SCRAPER_AGGREGATOR" &&
               normalized.sourceType === "SCRAPER_SEARCH");
@@ -221,8 +244,8 @@ async function executePipeline(options?: {
             where: { id: matched.id },
             data: {
               lastScrapedAt: now,
-              lastVerifiedAt: raw.sourceVerifiedLive ? now : undefined,
-              freshnessScore: Math.max(80, normalized.freshnessScore),
+              lastVerifiedAt: raw.sourceVerifiedLive && !raw.lowTrust ? now : undefined,
+              ...(raw.lowTrust ? {} : { freshnessScore: Math.max(80, normalized.freshnessScore) }),
               ...(shouldPreserveAuthoritative
                 ? {}
                 : {
@@ -241,6 +264,7 @@ async function executePipeline(options?: {
             },
           });
           updated += 1;
+          touchedIds.add(matched.id);
         } else {
           let slug = uniqueSlug(normalized.slug, existingBySlug);
           let createdDeal: Awaited<ReturnType<typeof prisma.deal.create>> | null = null;
@@ -264,6 +288,7 @@ async function executePipeline(options?: {
                   requiresIdCard: normalized.requiresIdCard,
                   minPurchaseIdr: normalized.minPurchaseIdr,
                   locations: normalized.locations,
+                  cities: parseCities(normalized.locations),
                   sourceUrl: normalized.sourceUrl,
                   sourceType: normalized.sourceType,
                   verificationStatus: normalized.verificationStatus,
@@ -293,8 +318,13 @@ async function executePipeline(options?: {
           }
           if (!createdDeal) throw new Error(`Slug bentrok untuk ${normalized.slug}`);
           existingBySlug.set(createdDeal.slug, createdDeal);
-          addToBrandRoot(rootKey, createdDeal);
+          dupePool.push({
+            ...createdDeal,
+            discountType: normalized.discountType,
+            discountValue: normalized.discountValue,
+          });
           created += 1;
+          touchedIds.add(createdDeal.id);
         }
       } catch (err) {
         failed += 1;
@@ -304,6 +334,15 @@ async function executePipeline(options?: {
           );
         }
         console.error(`[scraper] gagal menyimpan deal "${raw.title}":`, err);
+      }
+    }
+
+    // Non-fatal: skipped automatically when no AI Gateway credentials are present.
+    if (touchedIds.size > 0) {
+      try {
+        await embedDeals([...touchedIds]);
+      } catch (err) {
+        console.error("[scraper] embedding gagal (diabaikan):", err);
       }
     }
 
